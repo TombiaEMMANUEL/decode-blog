@@ -1,0 +1,158 @@
+"use client";
+import Link from "next/link";
+import { db } from "@/lib/firebaseClient";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useState } from "react";
+import { FaGithub, FaEnvelope } from "react-icons/fa";
+import { FaXTwitter } from "react-icons/fa6";
+import { FiArrowRight, FiZap } from "react-icons/fi";
+
+const quickLinks = [
+  { name: "Home", href: "/" },
+  { name: "Blog", href: "/blog" },
+  { name: "Learn", href: "/learn" },
+  { name: "About", href: "/about" },
+  { name: "Contact", href: "/contact" },
+];
+
+const socialLinks = [
+  { Icon: FaXTwitter, href: "https://twitter.com/yourhandle", label: "X" },
+  { Icon: FaGithub, href: "https://github.com/yourhandle", label: "GitHub" },
+  { Icon: FaEnvelope, href: "mailto:hello@decode.com", label: "Email" },
+];
+
+export default function Footer() {
+  const [email, setEmail] = useState("");
+  const [subscribed, setSubscribed] = useState(false);
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    try {
+      await addDoc(collection(db, "newsletter"), {
+        email: email.trim(),
+        subscribedAt: serverTimestamp(),
+      });
+      setSubscribed(true);
+      setEmail("");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <footer
+      style={{
+        position: "relative",
+        backgroundColor: "#080412",
+        borderTop: "1px solid rgba(139, 92, 246, 0.2)",
+        marginTop: "80px",
+        overflow: "hidden",
+      }}
+    >
+      {/* BACKGROUND GLOW */}
+      <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "600px", height: "300px", background: "radial-gradient(ellipse, rgba(139, 92, 246, 0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
+
+      {/* GRID PATTERN */}
+      <div style={{ position: "absolute", inset: 0, backgroundImage: `linear-gradient(rgba(139, 92, 246, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(139, 92, 246, 0.03) 1px, transparent 1px)`, backgroundSize: "40px 40px", pointerEvents: "none" }} />
+
+      <div style={{ position: "relative", zIndex: 1, maxWidth: "1100px", margin: "0 auto", padding: "60px 24px 0" }}>
+
+        {/* TOP SECTION */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "48px", marginBottom: "60px" }}>
+
+          {/* BRAND */}
+          <div>
+            <Link href="/" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none", marginBottom: "16px" }}>
+              <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 900, fontSize: "16px" }}>D</div>
+              <span style={{ color: "white", fontWeight: 700, fontSize: "20px", letterSpacing: "-0.5px" }}>Decode</span>
+            </Link>
+            <p style={{ color: "#6b7280", fontSize: "14px", lineHeight: 1.7, marginBottom: "24px", maxWidth: "240px" }}>
+              Simplifying complexity — one idea at a time. Learn, grow, and build with clarity.
+            </p>
+            <div style={{ display: "flex", gap: "12px" }}>
+              {socialLinks.map((item) => {
+                const Icon = item.Icon;
+                return (
+                  <a key={item.label} href={item.href} target="_blank" rel="noopener noreferrer" aria-label={item.label}
+                    style={{ width: "36px", height: "36px", borderRadius: "8px", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: "16px", textDecoration: "none", transition: "all 0.2s" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.15)"; e.currentTarget.style.borderColor = "rgba(139,92,246,0.3)"; e.currentTarget.style.color = "#a78bfa"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "#9ca3af"; }}
+                  >
+                    <Icon />
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* QUICK LINKS */}
+          <div>
+            <h3 style={{ color: "white", fontSize: "14px", fontWeight: 600, marginBottom: "20px", letterSpacing: "0.5px", textTransform: "uppercase" }}>Navigation</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {quickLinks.map((link) => (
+                <Link key={link.name} href={link.href}
+                  style={{ color: "#6b7280", fontSize: "14px", textDecoration: "none", transition: "color 0.2s" }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = "#a78bfa"}
+                  onMouseLeave={(e) => e.currentTarget.style.color = "#6b7280"}
+                >
+                  {link.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* NEWSLETTER */}
+          <div style={{ gridColumn: "span 2" }}>
+            <div style={{ backgroundColor: "rgba(139, 92, 246, 0.05)", border: "1px solid rgba(139, 92, 246, 0.15)", borderRadius: "16px", padding: "32px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                <FiZap style={{ color: "#a78bfa", fontSize: "16px" }} />
+                <h3 style={{ color: "white", fontSize: "18px", fontWeight: 700 }}>Stay in the loop</h3>
+              </div>
+              <p style={{ color: "#6b7280", fontSize: "14px", marginBottom: "20px", lineHeight: 1.6 }}>
+                Get the latest articles and courses delivered straight to your inbox. No spam, ever.
+              </p>
+              {subscribed ? (
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#a78bfa", fontSize: "14px", fontWeight: 500 }}>
+                  <FiZap />
+                  You're subscribed! Welcome to Decode.
+                </div>
+              ) : (
+                <form onSubmit={handleSubscribe} style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    style={{ flex: 1, minWidth: "200px", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "12px 16px", color: "white", fontSize: "14px", outline: "none" }}
+                  />
+                  <button type="submit" style={{ display: "flex", alignItems: "center", gap: "8px", backgroundColor: "#7c3aed", color: "white", padding: "12px 20px", borderRadius: "10px", border: "none", fontWeight: 600, fontSize: "14px", cursor: "pointer", whiteSpace: "nowrap" }}>
+                    Subscribe <FiArrowRight />
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* BOTTOM BAR */}
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "24px 0", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+          <p style={{ color: "#4b5563", fontSize: "13px" }}>
+            &copy; {new Date().getFullYear()} Decode. All rights reserved.
+          </p>
+          <div style={{ display: "flex", gap: "24px" }}>
+            {["Privacy Policy", "Terms of Service"].map((item) => (
+              <Link key={item} href="#"
+                style={{ color: "#4b5563", fontSize: "13px", textDecoration: "none", transition: "color 0.2s" }}
+                onMouseEnter={(e) => e.currentTarget.style.color = "#9ca3af"}
+                onMouseLeave={(e) => e.currentTarget.style.color = "#4b5563"}
+              >
+                {item}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
