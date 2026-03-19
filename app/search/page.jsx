@@ -48,8 +48,8 @@ function SearchResults() {
 
   return (
     <div style={{ maxWidth: "800px", margin: "0 auto" }}>
-      <div style={{ marginBottom: "40px" }}>
-        <h1 style={{ color: "white", fontSize: "36px", fontWeight: 800, letterSpacing: "-1px", marginBottom: "8px" }}>Search</h1>
+      <div style={{ marginBottom: "32px" }}>
+        <h1 style={{ color: "white", fontSize: "clamp(28px, 7vw, 36px)", fontWeight: 800, letterSpacing: "-1px", marginBottom: "8px" }}>Search</h1>
         {searchQuery && (
           <p style={{ color: "#9ca3af", fontSize: "15px" }}>
             {loading ? "Searching..." : `${results.length} result${results.length !== 1 ? "s" : ""} for `}
@@ -61,13 +61,13 @@ function SearchResults() {
       {loading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {[1, 2, 3].map((i) => (
-            <div key={i} style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "14px", height: "120px" }} />
+            <div key={i} style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "14px", height: "100px" }} />
           ))}
         </div>
       ) : !searched ? (
         <div style={{ textAlign: "center", padding: "80px 0" }}>
           <FiSearch style={{ color: "#4b5563", fontSize: "48px", marginBottom: "16px" }} />
-          <p style={{ color: "#6b7280", fontSize: "16px" }}>Type something to search posts</p>
+          <p style={{ color: "#6b7280", fontSize: "16px" }}>Type something in the search bar to find posts</p>
         </div>
       ) : results.length === 0 ? (
         <div style={{ textAlign: "center", padding: "80px 0" }}>
@@ -80,19 +80,18 @@ function SearchResults() {
           {results.map((post) => (
             <Link key={post.id} href={`/blog/${post.slug}`} style={{ textDecoration: "none" }}>
               <div
-                style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "14px", padding: "24px", transition: "all 0.2s", cursor: "pointer" }}
+                style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "14px", padding: "20px", transition: "all 0.2s", cursor: "pointer" }}
                 onMouseEnter={(e) => { e.currentTarget.style.border = "1px solid rgba(139,92,246,0.3)"; e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.05)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.border = "1px solid rgba(255,255,255,0.07)"; e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.03)"; }}
-              >
+                onMouseLeave={(e) => { e.currentTarget.style.border = "1px solid rgba(255,255,255,0.07)"; e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.03)"; }}>
                 {post.category && (
                   <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "rgba(139,92,246,0.1)", color: "#a78bfa", padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: 500, marginBottom: "10px" }}>
                     <FiTag style={{ fontSize: "10px" }} />
                     {post.category}
                   </div>
                 )}
-                <h2 style={{ color: "white", fontSize: "20px", fontWeight: 700, marginBottom: "8px", lineHeight: 1.3 }}>{post.title}</h2>
-                <p style={{ color: "#9ca3af", fontSize: "14px", lineHeight: 1.6, marginBottom: "16px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{post.excerpt}</p>
-                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <h2 style={{ color: "white", fontSize: "clamp(16px, 3vw, 20px)", fontWeight: 700, marginBottom: "8px", lineHeight: 1.3 }}>{post.title}</h2>
+                <p style={{ color: "#9ca3af", fontSize: "14px", lineHeight: 1.6, marginBottom: "14px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{post.excerpt}</p>
+                <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#6b7280", fontSize: "13px" }}>
                     <FiUser style={{ fontSize: "12px" }} />
                     {post.authorName}
@@ -113,10 +112,10 @@ function SearchResults() {
 
 export default function SearchPage() {
   return (
-    <main style={{ minHeight: "100vh", backgroundColor: "#080412", padding: "40px 24px" }}>
+    <main style={{ minHeight: "100vh", backgroundColor: "#080412", padding: "40px 20px" }}>
       <Suspense fallback={
         <div style={{ maxWidth: "800px", margin: "0 auto" }}>
-          <h1 style={{ color: "white", fontSize: "36px", fontWeight: 800, marginBottom: "40px" }}>Search</h1>
+          <h1 style={{ color: "white", fontSize: "36px", fontWeight: 800, marginBottom: "32px" }}>Search</h1>
           <div style={{ textAlign: "center", padding: "80px 0", color: "#6b7280" }}>Loading...</div>
         </div>
       }>
