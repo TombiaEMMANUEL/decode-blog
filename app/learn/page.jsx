@@ -88,17 +88,29 @@ export default function LearnPage() {
                     onMouseLeave={(e) => { e.currentTarget.style.border = "1px solid rgba(255,255,255,0.07)"; e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.03)"; e.currentTarget.style.transform = "translateY(0)"; }}
                   >
                     {/* COVER */}
-                      <div style={{ width: "100%", height: "140px", borderRadius: "10px", overflow: "hidden", marginBottom: "20px", position: "relative" }}>
-                        <img
-                        src={`https://source.unsplash.com/400x140/?${encodeURIComponent(course.category || course.title)}`}
-                        alt={course.title}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        onError={(e) => {
-                        e.target.style.display = "none";
-                        e.target.parentElement.style.backgroundColor = "rgba(139,92,246,0.1)";
-                        }}
-                        />
-                      </div>
+                          <div style={{
+                            width: "100%",
+                            height: "140px",
+                            borderRadius: "10px",
+                            overflow: "hidden",
+                            marginBottom: "20px",
+                            background: course.category === "Programming" || course.category === "programming"
+                              ? "linear-gradient(135deg, #1e1b4b, #4c1d95)"
+                              : course.category === "Design"
+                              ? "linear-gradient(135deg, #1e3a5f, #0e7490)"
+                              : course.category === "Business"
+                              ? "linear-gradient(135deg, #1a2e1a, #166534)"
+                              : "linear-gradient(135deg, #2d1b4e, #6d28d9)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            position: "relative",
+                          }}>
+                            <FiBook style={{ color: "rgba(255,255,255,0.3)", fontSize: "48px" }} />
+                            <div style={{ position: "absolute", bottom: "12px", left: "16px", color: "rgba(255,255,255,0.6)", fontSize: "12px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px" }}>
+                              {course.category}
+                            </div>
+                          </div>
 
                     {/* BADGES */}
                     <div style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
