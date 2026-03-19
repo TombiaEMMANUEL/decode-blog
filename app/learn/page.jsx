@@ -88,9 +88,17 @@ export default function LearnPage() {
                     onMouseLeave={(e) => { e.currentTarget.style.border = "1px solid rgba(255,255,255,0.07)"; e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.03)"; e.currentTarget.style.transform = "translateY(0)"; }}
                   >
                     {/* COVER */}
-                    <div style={{ width: "100%", height: "140px", borderRadius: "10px", backgroundColor: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.15)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "20px" }}>
-                      <FiBook style={{ color: "#8b5cf6", fontSize: "40px" }} />
-                    </div>
+                      <div style={{ width: "100%", height: "140px", borderRadius: "10px", overflow: "hidden", marginBottom: "20px", position: "relative" }}>
+                        <img
+                        src={`https://source.unsplash.com/400x140/?${encodeURIComponent(course.category || course.title)}`}
+                        alt={course.title}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        onError={(e) => {
+                        e.target.style.display = "none";
+                        e.target.parentElement.style.backgroundColor = "rgba(139,92,246,0.1)";
+                        }}
+                        />
+                      </div>
 
                     {/* BADGES */}
                     <div style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
