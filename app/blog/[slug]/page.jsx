@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebaseClient";
 import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, arrayRemove, addDoc, orderBy, serverTimestamp, deleteDoc } from "firebase/firestore";
-import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, arrayRemove, addDoc, orderBy, serverTimestamp } from "firebase/firestore";
 import { useSession } from "next-auth/react";
 import { FiClock, FiUser, FiHeart, FiBookmark, FiArrowLeft, FiTag } from "react-icons/fi";
 
@@ -66,7 +65,10 @@ export default function PostPage() {
         console.error(err);
       }
     };
-    if (slug) fetchPost();
+    if (slug) {
+  fetchPost();
+  fetchComments();
+}
   }, [slug, session]);
 
   const handleLike = async () => {
