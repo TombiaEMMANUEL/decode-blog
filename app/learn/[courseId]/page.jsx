@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebaseClient";
 import { doc, getDoc, collection, query, where, getDocs, orderBy, deleteDoc } from "firebase/firestore";
-import { doc, getDoc, collection, query, where, getDocs, orderBy } from "firebase/firestore";
 import Link from "next/link";
 import { FiArrowLeft, FiBook, FiClock, FiUser, FiTag, FiZap, FiCheckCircle } from "react-icons/fi";
 
