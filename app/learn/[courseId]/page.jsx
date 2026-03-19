@@ -1,7 +1,9 @@
 "use client";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebaseClient";
+import { doc, getDoc, collection, query, where, getDocs, orderBy, deleteDoc } from "firebase/firestore";
 import { doc, getDoc, collection, query, where, getDocs, orderBy } from "firebase/firestore";
 import Link from "next/link";
 import { FiArrowLeft, FiBook, FiClock, FiUser, FiTag, FiZap, FiCheckCircle } from "react-icons/fi";
@@ -14,6 +16,7 @@ const difficultyColors = {
 
 export default function CourseDetailPage() {
   const { courseId } = useParams();
+  const { data: session } = useSession();
   const router = useRouter();
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
@@ -69,11 +72,25 @@ export default function CourseDetailPage() {
     <main style={{ minHeight: "100vh", backgroundColor: "#080412", padding: "40px 24px" }}>
       <div style={{ maxWidth: "900px", margin: "0 auto" }}>
 
-        {/* BACK */}
-        <button onClick={() => router.push("/learn")} style={{ display: "flex", alignItems: "center", gap: "8px", color: "#9ca3af", background: "none", border: "none", cursor: "pointer", fontSize: "14px", marginBottom: "40px", padding: 0 }}>
-          <FiArrowLeft />
-          Back to Courses
-        </button>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "40px" }}>
+  <button onClick={() => router.push("/learn")} style={{ display: "flex", alignItems: "center", gap: "8px", color: "#9ca3af", background: "none", border: "none", cursor: "pointer", fontSize: "14px", padding: 0 }}>
+    <FiArrowLeft />
+    Back to Courses
+  </button>
+  {session?.user?.id === course.authorId && (
+    <button
+      onClick={async () => {
+        if (confirm("Are you sure you want to delete this course?")) {
+          await deleteDoc(doc(db, "courses", course.id));
+          router.push("/learn");
+        }
+      }}
+      style={{ display: "flex", alignItems: "center", gap: "6px", backgroundColor: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171", padding: "8px 16px", borderRadius: "10px", border: "none", cursor: "pointer", fontSize: "13px", fontWeight: 500 }}
+    >
+      Delete Course
+    </button>
+  )}
+</div>
 
         {/* COURSE HEADER */}
         <div style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "20px", padding: "40px", marginBottom: "32px" }}>

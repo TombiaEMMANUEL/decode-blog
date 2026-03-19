@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebaseClient";
+import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, arrayRemove, addDoc, orderBy, serverTimestamp, deleteDoc } from "firebase/firestore";
 import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, arrayRemove, addDoc, orderBy, serverTimestamp } from "firebase/firestore";
 import { useSession } from "next-auth/react";
 import { FiClock, FiUser, FiHeart, FiBookmark, FiArrowLeft, FiTag } from "react-icons/fi";
@@ -137,10 +138,25 @@ export default function PostPage() {
     <main style={{ minHeight: "100vh", backgroundColor: "#080412", padding: "40px 24px" }}>
       <div style={{ maxWidth: "760px", margin: "0 auto" }}>
 
-        <button onClick={() => router.push("/blog")} style={{ display: "flex", alignItems: "center", gap: "8px", color: "#9ca3af", background: "none", border: "none", cursor: "pointer", fontSize: "14px", marginBottom: "40px", padding: 0 }}>
-          <FiArrowLeft />
-          Back to Blog
-        </button>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "40px" }}>
+    <button onClick={() => router.push("/blog")} style={{ display: "flex", alignItems: "center", gap: "8px", color: "#9ca3af", background: "none", border: "none", cursor: "pointer", fontSize: "14px", padding: 0 }}>
+    <FiArrowLeft />
+    Back to Blog
+  </button>
+  {session?.user?.id === post.authorId && (
+    <button
+      onClick={async () => {
+        if (confirm("Are you sure you want to delete this post?")) {
+          await deleteDoc(doc(db, "posts", post.id));
+          router.push("/blog");
+        }
+      }}
+      style={{ display: "flex", alignItems: "center", gap: "6px", backgroundColor: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171", padding: "8px 16px", borderRadius: "10px", border: "none", cursor: "pointer", fontSize: "13px", fontWeight: 500 }}
+    >
+      Delete Post
+    </button>
+  )}
+</div>
 
         {post.category && (
           <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)", color: "#a78bfa", padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: 500, marginBottom: "20px" }}>
