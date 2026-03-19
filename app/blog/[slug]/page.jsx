@@ -54,11 +54,7 @@ export default function PostPage() {
 
     const fetchComments = async () => {
       try {
-        const q = query(
-          collection(db, "comments"),
-          where("postId", "==", slug),
-          orderBy("createdAt", "asc")
-        );
+        const q = query(collection(db, "comments"), where("postId", "==", slug), orderBy("createdAt", "asc"));
         const snap = await getDocs(q);
         setComments(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       } catch (err) {
@@ -103,12 +99,8 @@ export default function PostPage() {
     setSubmitting(true);
     try {
       const newComment = {
-        postId: slug,
-        authorId: session.user.id,
-        authorName: session.user.name,
-        authorImage: session.user.image,
-        content: commentText.trim(),
-        createdAt: serverTimestamp(),
+        postId: slug, authorId: session.user.id, authorName: session.user.name,
+        authorImage: session.user.image, content: commentText.trim(), createdAt: serverTimestamp(),
       };
       const ref = await addDoc(collection(db, "comments"), newComment);
       setComments((prev) => [...prev, { id: ref.id, ...newComment, createdAt: new Date() }]);
@@ -132,7 +124,7 @@ export default function PostPage() {
   if (loading) {
     return (
       <main style={{ minHeight: "100vh", backgroundColor: "#080412", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ color: "#9ca3af", fontSize: "16px" }}>Loading...</div>
+        <div style={{ color: "#9ca3af" }}>Loading...</div>
       </main>
     );
   }
@@ -149,18 +141,18 @@ export default function PostPage() {
   }
 
   return (
-    <main style={{ minHeight: "100vh", backgroundColor: "#080412", padding: "40px 24px" }}>
+    <main style={{ minHeight: "100vh", backgroundColor: "#080412", padding: "32px 20px" }}>
       <div style={{ maxWidth: "760px", margin: "0 auto" }}>
 
         {/* TOP BAR */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "40px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "32px", gap: "12px" }}>
           <button onClick={() => router.push("/blog")} style={{ display: "flex", alignItems: "center", gap: "8px", color: "#9ca3af", background: "none", border: "none", cursor: "pointer", fontSize: "14px", padding: 0 }}>
             <FiArrowLeft />
             Back to Blog
           </button>
           {isAuthor && (
             <button onClick={handleDelete}
-              style={{ display: "flex", alignItems: "center", gap: "6px", backgroundColor: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171", padding: "8px 16px", borderRadius: "10px", cursor: "pointer", fontSize: "13px", fontWeight: 500 }}>
+              style={{ display: "flex", alignItems: "center", gap: "6px", backgroundColor: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171", padding: "8px 14px", borderRadius: "10px", cursor: "pointer", fontSize: "13px", fontWeight: 500, whiteSpace: "nowrap" }}>
               Delete Post
             </button>
           )}
@@ -168,41 +160,40 @@ export default function PostPage() {
 
         {/* CATEGORY */}
         {post.category && (
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)", color: "#a78bfa", padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: 500, marginBottom: "20px" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)", color: "#a78bfa", padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: 500, marginBottom: "16px" }}>
             <FiTag style={{ fontSize: "10px" }} />
             {post.category}
           </div>
         )}
 
         {/* TITLE */}
-        <h1 style={{ fontSize: "clamp(28px, 5vw, 48px)", fontWeight: 800, color: "white", lineHeight: 1.2, letterSpacing: "-1px", marginBottom: "24px" }}>
+        <h1 style={{ fontSize: "clamp(24px, 6vw, 48px)", fontWeight: 800, color: "white", lineHeight: 1.2, letterSpacing: "-1px", marginBottom: "20px" }}>
           {post.title}
         </h1>
 
         {/* AUTHOR ROW */}
-        <div style={{ display: "flex", alignItems: "center", gap: "20px", paddingBottom: "24px", borderBottom: "1px solid rgba(255,255,255,0.08)", marginBottom: "40px", flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", paddingBottom: "20px", borderBottom: "1px solid rgba(255,255,255,0.08)", marginBottom: "32px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
             {post.authorImage && (
-              <img src={post.authorImage} alt={post.authorName} style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover" }} />
+              <img src={post.authorImage} alt={post.authorName} style={{ width: "30px", height: "30px", borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
             )}
             <Link href={`/profile/${post.authorId}`}
               style={{ color: "#e5e7eb", fontSize: "14px", fontWeight: 500, textDecoration: "none" }}
               onMouseEnter={(e) => e.currentTarget.style.color = "#a78bfa"}
-              onMouseLeave={(e) => e.currentTarget.style.color = "#e5e7eb"}
-            >
+              onMouseLeave={(e) => e.currentTarget.style.color = "#e5e7eb"}>
               {post.authorName}
             </Link>
+            <div style={{ display: "flex", alignItems: "center", gap: "4px", color: "#6b7280", fontSize: "13px" }}>
+              <FiClock style={{ fontSize: "11px" }} />
+              {timeAgo(post.createdAt)}
+            </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#6b7280", fontSize: "13px" }}>
-            <FiClock style={{ fontSize: "12px" }} />
-            {timeAgo(post.createdAt)}
-          </div>
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "12px" }}>
-            <button onClick={handleLike} style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "1px solid", borderColor: liked ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.1)", color: liked ? "#f87171" : "#9ca3af", padding: "8px 16px", borderRadius: "100px", cursor: session ? "pointer" : "default", fontSize: "13px", transition: "all 0.2s" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <button onClick={handleLike} style={{ display: "flex", alignItems: "center", gap: "5px", background: "none", border: "1px solid", borderColor: liked ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.1)", color: liked ? "#f87171" : "#9ca3af", padding: "7px 14px", borderRadius: "100px", cursor: session ? "pointer" : "default", fontSize: "13px" }}>
               <FiHeart style={{ fill: liked ? "#f87171" : "none" }} />
               {likeCount}
             </button>
-            <button onClick={handleBookmark} style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "1px solid", borderColor: bookmarked ? "rgba(139,92,246,0.4)" : "rgba(255,255,255,0.1)", color: bookmarked ? "#a78bfa" : "#9ca3af", padding: "8px 16px", borderRadius: "100px", cursor: session ? "pointer" : "default", fontSize: "13px", transition: "all 0.2s" }}>
+            <button onClick={handleBookmark} style={{ display: "flex", alignItems: "center", gap: "5px", background: "none", border: "1px solid", borderColor: bookmarked ? "rgba(139,92,246,0.4)" : "rgba(255,255,255,0.1)", color: bookmarked ? "#a78bfa" : "#9ca3af", padding: "7px 14px", borderRadius: "100px", cursor: session ? "pointer" : "default", fontSize: "13px" }}>
               <FiBookmark style={{ fill: bookmarked ? "#a78bfa" : "none" }} />
               {bookmarked ? "Saved" : "Save"}
             </button>
@@ -210,11 +201,11 @@ export default function PostPage() {
         </div>
 
         {/* CONTENT */}
-        <div className="post-content" dangerouslySetInnerHTML={{ __html: post.content }} style={{ color: "#d1d5db", fontSize: "17px", lineHeight: 1.8 }} />
+        <div className="post-content" dangerouslySetInnerHTML={{ __html: post.content }} style={{ color: "#d1d5db", fontSize: "clamp(15px, 3vw, 17px)", lineHeight: 1.8 }} />
 
         {/* TAGS */}
         {post.tags?.length > 0 && (
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "48px", paddingTop: "24px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "40px", paddingTop: "20px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
             {post.tags.map((tag) => (
               <span key={tag} style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#9ca3af", padding: "4px 12px", borderRadius: "100px", fontSize: "12px" }}>
                 #{tag}
@@ -224,38 +215,33 @@ export default function PostPage() {
         )}
 
         {/* COMMENTS */}
-        <div style={{ marginTop: "60px" }}>
-          <h3 style={{ color: "white", fontSize: "20px", fontWeight: 700, marginBottom: "24px" }}>
+        <div style={{ marginTop: "48px" }}>
+          <h3 style={{ color: "white", fontSize: "18px", fontWeight: 700, marginBottom: "20px" }}>
             Comments ({comments.length})
           </h3>
 
           {session ? (
-            <div style={{ marginBottom: "32px" }}>
-              <textarea
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Write a comment..."
-                rows={3}
-                style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", padding: "14px 16px", color: "white", fontSize: "14px", outline: "none", resize: "vertical", marginBottom: "12px", boxSizing: "border-box" }}
-              />
+            <div style={{ marginBottom: "28px" }}>
+              <textarea value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Write a comment..." rows={3}
+                style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", padding: "12px 14px", color: "white", fontSize: "14px", outline: "none", resize: "vertical", marginBottom: "10px", boxSizing: "border-box" }} />
               <button onClick={handleComment} disabled={submitting}
-                style={{ backgroundColor: "#7c3aed", color: "white", padding: "10px 24px", borderRadius: "10px", border: "none", fontWeight: 600, fontSize: "14px", cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1 }}>
+                style={{ backgroundColor: "#7c3aed", color: "white", padding: "10px 20px", borderRadius: "10px", border: "none", fontWeight: 600, fontSize: "14px", cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1 }}>
                 {submitting ? "Posting..." : "Post Comment"}
               </button>
             </div>
           ) : (
-            <p style={{ color: "#9ca3af", fontSize: "14px", marginBottom: "32px" }}>Sign in to leave a comment.</p>
+            <p style={{ color: "#9ca3af", fontSize: "14px", marginBottom: "24px" }}>Sign in to leave a comment.</p>
           )}
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             {comments.length === 0 ? (
               <p style={{ color: "#6b7280", fontSize: "14px" }}>No comments yet. Be the first!</p>
             ) : (
               comments.map((comment) => (
-                <div key={comment.id} style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "12px", padding: "16px 20px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
+                <div key={comment.id} style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "12px", padding: "14px 16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
                     {comment.authorImage && (
-                      <img src={comment.authorImage} alt={comment.authorName} style={{ width: "28px", height: "28px", borderRadius: "50%" }} />
+                      <img src={comment.authorImage} alt={comment.authorName} style={{ width: "26px", height: "26px", borderRadius: "50%", flexShrink: 0 }} />
                     )}
                     <span style={{ color: "white", fontSize: "13px", fontWeight: 600 }}>{comment.authorName}</span>
                     <span style={{ color: "#6b7280", fontSize: "12px" }}>{timeAgo(comment.createdAt)}</span>
