@@ -185,7 +185,12 @@ export default function PostPage() {
             {post.category}
           </div>
         )}
-
+        {/* COVER IMAGE */}
+          {post.coverImage && (
+            <div style={{ width: "100%", borderRadius: "16px", overflow: "hidden", marginBottom: "28px" }}>
+              <img src={post.coverImage} alt={post.title} style={{ width: "100%", height: "clamp(200px, 40vw, 400px)", objectFit: "cover", display: "block" }} />
+            </div>
+          )}
         {/* TITLE */}
         <h1 style={{ fontSize: "clamp(24px, 6vw, 48px)", fontWeight: 800, color: "white", lineHeight: 1.2, letterSpacing: "-1px", marginBottom: "20px" }}>
           {post.title}

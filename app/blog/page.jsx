@@ -81,6 +81,11 @@ export default function BlogPage() {
                   style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "16px", padding: "24px", height: "100%", transition: "all 0.3s", cursor: "pointer", boxSizing: "border-box" }}
                   onMouseEnter={(e) => { e.currentTarget.style.border = "1px solid rgba(139,92,246,0.4)"; e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.05)"; e.currentTarget.style.transform = "translateY(-4px)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.border = "1px solid rgba(255,255,255,0.07)"; e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.03)"; e.currentTarget.style.transform = "translateY(0)"; }}>
+                   {post.coverImage && (
+                    <div style={{ width: "100%", height: "160px", borderRadius: "10px", overflow: "hidden", marginBottom: "14px" }}>
+                     <img src={post.coverImage} alt={post.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      </div>
+                       )}
                   {post.category && (
                     <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)", color: "#a78bfa", padding: "4px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: 500, marginBottom: "14px" }}>
                       <FiTag style={{ fontSize: "10px" }} />
