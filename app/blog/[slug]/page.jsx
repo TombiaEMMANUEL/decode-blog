@@ -22,6 +22,7 @@ export default function PostPage() {
   const { slug } = useParams();
   const router = useRouter();
   const { data: session } = useSession();
+  const [toc, setToc] = useState([]);
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState(false);
@@ -67,6 +68,20 @@ export default function PostPage() {
         console.error(err);
       }
     };
+      useEffect(() => {
+        if (post?.content) {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(post.content, "text/html");
+          const headings = Array.from(doc.querySelectorAll("h1, h2, h3"));
+          const items = headings.map((h, i) => ({
+            id: `heading-${i}`,
+            text: h.textContent,
+            level: parseInt(h.tagName[1]),
+          }));
+          setToc(items);
+        }
+      }, [post]);
+      
     const fetchRelatedPosts = async (category, currentId) => {
         if (!category) return;
         try {
@@ -293,19 +308,26 @@ export default function PostPage() {
           </div>
         </div>
 
-        {/* CONTENT */}
-        <div className="post-content" dangerouslySetInnerHTML={{ __html: post.content }} style={{ color: "#d1d5db", fontSize: "clamp(15px, 3vw, 17px)", lineHeight: 1.8 }} />
+        {/* TABLE OF CONTENTS */}
+            {toc.length > 0 && (
+              <div style={{ backgroundColor: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.15)", borderRadius: "14px", padding: "20px 24px", marginBottom: "32px" }}>
+                <h3 style={{ color: "white", fontSize: "14px", fontWeight: 700, marginBottom: "14px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Table of Contents</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {toc.map((item) => (
+                    <a key={item.id} href={`#${item.id}`}
+                      style={{ color: "#9ca3af", fontSize: "14px", textDecoration: "none", paddingLeft: item.level === 2 ? "0px" : item.level === 3 ? "16px" : "32px", display: "flex", alignItems: "center", gap: "8px" }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = "#a78bfa"}
+                      onMouseLeave={(e) => e.currentTarget.style.color = "#9ca3af"}>
+                      <span style={{ color: "#6b7280", fontSize: "12px" }}>—</span>
+                      {item.text}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
 
-        {/* TAGS */}
-        {post.tags?.length > 0 && (
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "40px", paddingTop: "20px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-            {post.tags.map((tag) => (
-              <span key={tag} style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#9ca3af", padding: "4px 12px", borderRadius: "100px", fontSize: "12px" }}>
-                #{tag}
-              </span>
-            ))}
-          </div>
-        )}
+            {/* CONTENT */}
+            <div className="post-content" dangerouslySetInnerHTML={{ __html: post.content }} style={{ color: "#d1d5db", fontSize: "clamp(15px, 3vw, 17px)", lineHeight: 1.8 }} />
 
         {/* SHARE BOTTOM */}
         <div style={{ marginTop: "40px", padding: "24px", backgroundColor: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.15)", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
