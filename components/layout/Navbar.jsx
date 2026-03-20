@@ -1,6 +1,7 @@
-
 "use client";
 import Link from "next/link";
+import { useTheme } from "@/components/providers/ThemeProvider";
+import { FiSun, FiMoon } from "react-icons/fi";
 import { useState, useEffect, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { FiUser, FiLogOut, FiEdit, FiSearch, FiMenu, FiX, FiBook, FiChevronDown } from "react-icons/fi";
@@ -13,6 +14,7 @@ const navItems = [
 ];
 
 const Navbar = () => {
+  const { theme, toggleTheme } = useTheme();
   const [showNav, setShowNav] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -77,6 +79,14 @@ const Navbar = () => {
           {/* DESKTOP RIGHT */}
           {!isMobile && (
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+
+              {/* THEME TOGGLE */}
+              <button onClick={toggleTheme}
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#9ca3af", width: "36px", height: "36px", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "16px", flexShrink: 0 }}
+                title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}>
+                {theme === "dark" ? <FiSun /> : <FiMoon />}
+              </button>
+
               <div style={{ display: "flex", alignItems: "center", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", padding: "8px 12px", borderRadius: "10px", width: "160px" }}>
                 <FiSearch style={{ color: "#6b7280", marginRight: "8px", fontSize: "14px" }} />
                 <input type="text" placeholder="Search..." style={{ background: "transparent", border: "none", outline: "none", color: "#d1d5db", fontSize: "13px", width: "100%" }}
@@ -138,11 +148,17 @@ const Navbar = () => {
             </div>
           )}
 
-          {/* MOBILE MENU BUTTON */}
+          {/* MOBILE RIGHT — Theme toggle + Menu button */}
           {isMobile && (
-            <button style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "22px", padding: "4px" }} onClick={() => setShowNav(!showNav)}>
-              {showNav ? <FiX /> : <FiMenu />}
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <button onClick={toggleTheme}
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#9ca3af", width: "34px", height: "34px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "15px" }}>
+                {theme === "dark" ? <FiSun /> : <FiMoon />}
+              </button>
+              <button style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "22px", padding: "4px" }} onClick={() => setShowNav(!showNav)}>
+                {showNav ? <FiX /> : <FiMenu />}
+              </button>
+            </div>
           )}
         </nav>
       </div>

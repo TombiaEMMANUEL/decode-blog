@@ -1,6 +1,7 @@
 import { Geist } from "next/font/google";
 import "./globals.css";
 import AuthSessionProvider from "@/components/providers/AuthSessionProvider";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
@@ -17,11 +18,13 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={`${geist.className} antialiased bg-[#080412]`}>
+      <body className={`${geist.className} antialiased`}>
         <AuthSessionProvider>
-          <Navbar />
-          {children}
-          <Footer />
+          <ThemeProvider>
+            <Navbar />
+            {children}
+            <Footer />
+          </ThemeProvider>
         </AuthSessionProvider>
       </body>
     </html>
