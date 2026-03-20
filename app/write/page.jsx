@@ -53,13 +53,15 @@ export default function WritePage() {
     try {
       const content = editor.getHTML();
       const excerpt = editor.getText().slice(0, 150);
+      const wordCount = editor.getText().split(" ").filter(Boolean).length;
+      const readingTime = Math.max(1, Math.ceil(wordCount / 200));
       const slug = slugify(title) + "-" + Date.now();
       const titleKeywords = generateKeywords(title);
       const tagsArray = tags.split(",").map((t) => t.trim()).filter(Boolean);
       await addDoc(collection(db, "posts"), {
         title, slug, content, excerpt, category, tags: tagsArray, titleKeywords,
         authorId: session.user.id, authorName: session.user.name, authorImage: session.user.image,
-        likes: 0, likedBy: [], bookmarkedBy: [], published: true,
+      likes: 0, likedBy: [], bookmarkedBy: [], published: true, views: 0, readingTime: readingTime,
         createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
       });
       router.push("/blog");
