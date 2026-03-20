@@ -18,20 +18,54 @@ function timeAgo(timestamp) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+function TableOfContents({ content }) {
+  const [toc, setToc] = useState([]);
+
+  useEffect(() => {
+    if (!content) return;
+    const parser = new DOMParser();
+    const parsed = parser.parseFromString(content, "text/html");
+    const headings = Array.from(parsed.querySelectorAll("h1, h2, h3"));
+    setToc(headings.map((h, i) => ({
+      id: `heading-${i}`,
+      text: h.textContent,
+      level: parseInt(h.tagName[1]),
+    })));
+  }, [content]);
+
+  if (toc.length === 0) return null;
+
+  return (
+    <div style={{ backgroundColor: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.15)", borderRadius: "14px", padding: "20px 24px", marginBottom: "32px" }}>
+      <h3 style={{ color: "white", fontSize: "14px", fontWeight: 700, marginBottom: "14px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Table of Contents</h3>
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        {toc.map((item) => (
+          <a key={item.id} href={`#${item.id}`}
+            style={{ color: "#9ca3af", fontSize: "14px", textDecoration: "none", paddingLeft: item.level === 1 ? "0px" : item.level === 2 ? "12px" : "24px", display: "flex", alignItems: "center", gap: "8px" }}
+            onMouseEnter={(e) => e.currentTarget.style.color = "#a78bfa"}
+            onMouseLeave={(e) => e.currentTarget.style.color = "#9ca3af"}>
+            <span style={{ color: "#6b7280", fontSize: "12px" }}>—</span>
+            {item.text}
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function PostPage() {
   const { slug } = useParams();
   const router = useRouter();
   const { data: session } = useSession();
-  const [toc, setToc] = useState([]);
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [comments, setComments] = useState([]);
+  const [relatedPosts, setRelatedPosts] = useState([]);
   const [commentText, setCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [relatedPosts, setRelatedPosts] = useState([]);
   const [showShare, setShowShare] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -43,14 +77,22 @@ export default function PostPage() {
         if (!snap.empty) {
           const data = { id: snap.docs[0].id, ...snap.docs[0].data() };
           setPost(data);
-          fetchRelatedPosts(data.category, snap.docs[0].id);
           setLikeCount(data.likes || 0);
           if (session?.user?.id) {
             setLiked(data.likedBy?.includes(session.user.id));
             setBookmarked(data.bookmarkedBy?.includes(session.user.id));
           }
-          // Increment views
           await updateDoc(doc(db, "posts", snap.docs[0].id), { views: increment(1) });
+          // Fetch related posts
+          if (data.category) {
+            const relQ = query(collection(db, "posts"), where("category", "==", data.category));
+            const relSnap = await getDocs(relQ);
+            const related = relSnap.docs
+              .map((d) => ({ id: d.id, ...d.data() }))
+              .filter((p) => p.id !== snap.docs[0].id)
+              .slice(0, 3);
+            setRelatedPosts(related);
+          }
         }
       } catch (err) {
         console.error(err);
@@ -68,34 +110,6 @@ export default function PostPage() {
         console.error(err);
       }
     };
-      useEffect(() => {
-      if (post?.content && typeof window !== "undefined") {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(post.content, "text/html");
-        const headings = Array.from(doc.querySelectorAll("h1, h2, h3"));
-        const items = headings.map((h, i) => ({
-          id: `heading-${i}`,
-          text: h.textContent,
-          level: parseInt(h.tagName[1]),
-        }));
-        setToc(items);
-      }
-    }, [post]);
-
-    const fetchRelatedPosts = async (category, currentId) => {
-        if (!category) return;
-        try {
-          const q = query(collection(db, "posts"), where("category", "==", category));
-          const snap = await getDocs(q);
-          const related = snap.docs
-            .map((d) => ({ id: d.id, ...d.data() }))
-            .filter((p) => p.id !== currentId)
-            .slice(0, 3);
-          setRelatedPosts(related);
-        } catch (err) {
-          console.error(err);
-        }
-      };
 
     if (slug) {
       fetchPost();
@@ -161,13 +175,11 @@ export default function PostPage() {
   };
 
   const handleShareTwitter = () => {
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(window.location.href)}`;
-    window.open(url, "_blank");
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(window.location.href)}`, "_blank");
   };
 
   const handleShareWhatsApp = () => {
-    const url = `https://wa.me/?text=${encodeURIComponent(post.title + " " + window.location.href)}`;
-    window.open(url, "_blank");
+    window.open(`https://wa.me/?text=${encodeURIComponent(post.title + " " + window.location.href)}`, "_blank");
   };
 
   const isAuthor = session?.user?.name === post?.authorName;
@@ -209,6 +221,13 @@ export default function PostPage() {
           )}
         </div>
 
+        {/* COVER IMAGE */}
+        {post.coverImage && (
+          <div style={{ width: "100%", borderRadius: "16px", overflow: "hidden", marginBottom: "28px" }}>
+            <img src={post.coverImage} alt={post.title} style={{ width: "100%", height: "clamp(200px, 40vw, 400px)", objectFit: "cover", display: "block" }} />
+          </div>
+        )}
+
         {/* CATEGORY */}
         {post.category && (
           <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)", color: "#a78bfa", padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: 500, marginBottom: "16px" }}>
@@ -216,12 +235,7 @@ export default function PostPage() {
             {post.category}
           </div>
         )}
-        {/* COVER IMAGE */}
-          {post.coverImage && (
-            <div style={{ width: "100%", borderRadius: "16px", overflow: "hidden", marginBottom: "28px" }}>
-              <img src={post.coverImage} alt={post.title} style={{ width: "100%", height: "clamp(200px, 40vw, 400px)", objectFit: "cover", display: "block" }} />
-            </div>
-          )}
+
         {/* TITLE */}
         <h1 style={{ fontSize: "clamp(24px, 6vw, 48px)", fontWeight: 800, color: "white", lineHeight: 1.2, letterSpacing: "-1px", marginBottom: "20px" }}>
           {post.title}
@@ -261,7 +275,6 @@ export default function PostPage() {
             </div>
           </div>
 
-          {/* ACTION BUTTONS */}
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <button onClick={handleLike} style={{ display: "flex", alignItems: "center", gap: "5px", background: "none", border: "1px solid", borderColor: liked ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.1)", color: liked ? "#f87171" : "#9ca3af", padding: "7px 14px", borderRadius: "100px", cursor: session ? "pointer" : "default", fontSize: "13px" }}>
               <FiHeart style={{ fill: liked ? "#f87171" : "none" }} />
@@ -271,8 +284,6 @@ export default function PostPage() {
               <FiBookmark style={{ fill: bookmarked ? "#a78bfa" : "none" }} />
               {bookmarked ? "Saved" : "Save"}
             </button>
-
-            {/* SHARE BUTTON */}
             <div style={{ position: "relative" }}>
               <button onClick={() => setShowShare(!showShare)}
                 style={{ display: "flex", alignItems: "center", gap: "5px", background: "none", border: "1px solid rgba(255,255,255,0.1)", color: "#9ca3af", padding: "7px 14px", borderRadius: "100px", cursor: "pointer", fontSize: "13px" }}>
@@ -281,27 +292,22 @@ export default function PostPage() {
               </button>
               {showShare && (
                 <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, backgroundColor: "rgba(15,10,30,0.98)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: "12px", padding: "8px", minWidth: "160px", boxShadow: "0 8px 32px rgba(0,0,0,0.4)", zIndex: 50 }}>
-                  <button onClick={handleShareTwitter}
-                    style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "8px", color: "#d1d5db", fontSize: "13px", background: "none", border: "none", cursor: "pointer", width: "100%" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.15)"; e.currentTarget.style.color = "white"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = "#d1d5db"; }}>
-                    <FiTwitter style={{ fontSize: "14px" }} />
-                    Share on X
-                  </button>
-                  <button onClick={handleShareWhatsApp}
-                    style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "8px", color: "#d1d5db", fontSize: "13px", background: "none", border: "none", cursor: "pointer", width: "100%" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.15)"; e.currentTarget.style.color = "white"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = "#d1d5db"; }}>
-                    <FiMessageCircle style={{ fontSize: "14px" }} />
-                    Share on WhatsApp
-                  </button>
-                  <button onClick={handleCopyLink}
-                    style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "8px", color: copied ? "#4ade80" : "#d1d5db", fontSize: "13px", background: "none", border: "none", cursor: "pointer", width: "100%" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.15)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}>
-                    <FiLink style={{ fontSize: "14px" }} />
-                    {copied ? "Copied!" : "Copy Link"}
-                  </button>
+                  {[
+                    { icon: FiTwitter, label: "Share on X", action: handleShareTwitter },
+                    { icon: FiMessageCircle, label: "WhatsApp", action: handleShareWhatsApp },
+                    { icon: FiLink, label: copied ? "Copied!" : "Copy Link", action: handleCopyLink },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button key={item.label} onClick={item.action}
+                        style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "8px", color: "#d1d5db", fontSize: "13px", background: "none", border: "none", cursor: "pointer", width: "100%" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.15)"; e.currentTarget.style.color = "white"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = "#d1d5db"; }}>
+                        <Icon style={{ fontSize: "14px" }} />
+                        {item.label}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -309,25 +315,21 @@ export default function PostPage() {
         </div>
 
         {/* TABLE OF CONTENTS */}
-            {toc.length > 0 && (
-              <div style={{ backgroundColor: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.15)", borderRadius: "14px", padding: "20px 24px", marginBottom: "32px" }}>
-                <h3 style={{ color: "white", fontSize: "14px", fontWeight: 700, marginBottom: "14px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Table of Contents</h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {toc.map((item) => (
-                    <a key={item.id} href={`#${item.id}`}
-                      style={{ color: "#9ca3af", fontSize: "14px", textDecoration: "none", paddingLeft: item.level === 2 ? "0px" : item.level === 3 ? "16px" : "32px", display: "flex", alignItems: "center", gap: "8px" }}
-                      onMouseEnter={(e) => e.currentTarget.style.color = "#a78bfa"}
-                      onMouseLeave={(e) => e.currentTarget.style.color = "#9ca3af"}>
-                      <span style={{ color: "#6b7280", fontSize: "12px" }}>—</span>
-                      {item.text}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
+        <TableOfContents content={post.content} />
 
-            {/* CONTENT */}
-            <div className="post-content" dangerouslySetInnerHTML={{ __html: post.content }} style={{ color: "#d1d5db", fontSize: "clamp(15px, 3vw, 17px)", lineHeight: 1.8 }} />
+        {/* CONTENT */}
+        <div className="post-content" dangerouslySetInnerHTML={{ __html: post.content }} style={{ color: "#d1d5db", fontSize: "clamp(15px, 3vw, 17px)", lineHeight: 1.8 }} />
+
+        {/* TAGS */}
+        {post.tags?.length > 0 && (
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "40px", paddingTop: "20px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+            {post.tags.map((tag) => (
+              <span key={tag} style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#9ca3af", padding: "4px 12px", borderRadius: "100px", fontSize: "12px" }}>
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* SHARE BOTTOM */}
         <div style={{ marginTop: "40px", padding: "24px", backgroundColor: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.15)", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
@@ -355,7 +357,6 @@ export default function PostPage() {
             <FiMessageCircle />
             Comments ({comments.length})
           </h3>
-
           {session ? (
             <div style={{ marginBottom: "28px" }}>
               <textarea value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Write a comment..." rows={3}
@@ -370,7 +371,6 @@ export default function PostPage() {
               <Link href="/auth/signin" style={{ color: "#a78bfa", textDecoration: "none" }}>Sign in</Link> to leave a comment.
             </p>
           )}
-
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             {comments.length === 0 ? (
               <p style={{ color: "#6b7280", fontSize: "14px" }}>No comments yet. Be the first!</p>
@@ -378,9 +378,7 @@ export default function PostPage() {
               comments.map((comment) => (
                 <div key={comment.id} style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "12px", padding: "14px 16px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
-                    {comment.authorImage && (
-                      <img src={comment.authorImage} alt={comment.authorName} style={{ width: "26px", height: "26px", borderRadius: "50%", flexShrink: 0 }} />
-                    )}
+                    {comment.authorImage && <img src={comment.authorImage} alt={comment.authorName} style={{ width: "26px", height: "26px", borderRadius: "50%", flexShrink: 0 }} />}
                     <span style={{ color: "white", fontSize: "13px", fontWeight: 600 }}>{comment.authorName}</span>
                     <span style={{ color: "#6b7280", fontSize: "12px" }}>{timeAgo(comment.createdAt)}</span>
                   </div>
@@ -390,28 +388,29 @@ export default function PostPage() {
             )}
           </div>
         </div>
-            {relatedPosts.length > 0 && (
-              <div style={{ marginTop: "60px", paddingTop: "40px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                <h3 style={{ color: "white", fontSize: "18px", fontWeight: 700, marginBottom: "20px" }}>Related Posts</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "16px" }}>
-                  {relatedPosts.map((related) => (
-                    <Link key={related.id} href={`/blog/${related.slug}`} style={{ textDecoration: "none" }}>
-                      <div style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "14px", overflow: "hidden", transition: "all 0.2s" }}
-                        onMouseEnter={(e) => { e.currentTarget.style.border = "1px solid rgba(139,92,246,0.3)"; e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.05)"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.border = "1px solid rgba(255,255,255,0.07)"; e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.03)"; }}>
-                        {related.coverImage && (
-                          <img src={related.coverImage} alt={related.title} style={{ width: "100%", height: "120px", objectFit: "cover", display: "block" }} />
-                        )}
-                        <div style={{ padding: "14px" }}>
-                          <h4 style={{ color: "white", fontSize: "14px", fontWeight: 600, lineHeight: 1.4, marginBottom: "6px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{related.title}</h4>
-                          <p style={{ color: "#6b7280", fontSize: "12px" }}>{related.authorName}</p>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
+
+        {/* RELATED POSTS */}
+        {relatedPosts.length > 0 && (
+          <div style={{ marginTop: "60px", paddingTop: "40px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+            <h3 style={{ color: "white", fontSize: "18px", fontWeight: 700, marginBottom: "20px" }}>Related Posts</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "16px" }}>
+              {relatedPosts.map((related) => (
+                <Link key={related.id} href={`/blog/${related.slug}`} style={{ textDecoration: "none" }}>
+                  <div style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "14px", overflow: "hidden", transition: "all 0.2s" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.border = "1px solid rgba(139,92,246,0.3)"; e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.05)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.border = "1px solid rgba(255,255,255,0.07)"; e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.03)"; }}>
+                    {related.coverImage && <img src={related.coverImage} alt={related.title} style={{ width: "100%", height: "120px", objectFit: "cover", display: "block" }} />}
+                    <div style={{ padding: "14px" }}>
+                      <h4 style={{ color: "white", fontSize: "14px", fontWeight: 600, lineHeight: 1.4, marginBottom: "6px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{related.title}</h4>
+                      <p style={{ color: "#6b7280", fontSize: "12px" }}>{related.authorName}</p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
     </main>
   );
