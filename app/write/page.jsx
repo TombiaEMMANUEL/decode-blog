@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEditor, EditorContent } from "@tiptap/react";
@@ -7,7 +7,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { db } from "@/lib/firebaseClient";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { FiBold, FiItalic, FiList, FiCode, FiSave } from "react-icons/fi";
+import { FiBold, FiItalic, FiList, FiCode, FiSave, FiImage, FiX } from "react-icons/fi";
 
 function generateKeywords(title) {
   const words = title.toLowerCase().split(" ").filter((w) => w.length > 1);
@@ -25,9 +25,12 @@ function slugify(text) {
 export default function WritePage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const fileInputRef = useRef(null);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [tags, setTags] = useState("");
+  const [coverImage, setCoverImage] = useState("");
+  const [uploading, setUploading] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState("");
 
@@ -43,6 +46,30 @@ export default function WritePage() {
       },
     },
   });
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setError("Image must be under 5MB."); return; }
+    setUploading(true);
+    setError("");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.url) {
+        setCoverImage(data.url);
+      } else {
+        setError("Image upload failed. Please try again.");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Image upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handlePublish = async () => {
     if (!session) { setError("You must be signed in."); return; }
@@ -60,8 +87,10 @@ export default function WritePage() {
       const tagsArray = tags.split(",").map((t) => t.trim()).filter(Boolean);
       await addDoc(collection(db, "posts"), {
         title, slug, content, excerpt, category, tags: tagsArray, titleKeywords,
+        coverImage: coverImage || "",
         authorId: session.user.id, authorName: session.user.name, authorImage: session.user.image,
-        likes: 0, likedBy: [], bookmarkedBy: [], published: true, views: 0, readingTime: readingTime,
+        likes: 0, likedBy: [], bookmarkedBy: [], published: true,
+        views: 0, readingTime: readingTime,
         createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
       });
       router.push("/blog");
@@ -100,6 +129,27 @@ export default function WritePage() {
             {error}
           </div>
         )}
+
+        {/* COVER IMAGE */}
+        <div style={{ marginBottom: "24px" }}>
+          {coverImage ? (
+            <div style={{ position: "relative", width: "100%", borderRadius: "14px", overflow: "hidden" }}>
+              <img src={coverImage} alt="Cover" style={{ width: "100%", height: "clamp(180px, 30vw, 280px)", objectFit: "cover", display: "block" }} />
+              <button onClick={() => setCoverImage("")}
+                style={{ position: "absolute", top: "12px", right: "12px", backgroundColor: "rgba(0,0,0,0.7)", border: "none", color: "white", width: "32px", height: "32px", borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px" }}>
+                <FiX />
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+              style={{ width: "100%", height: "clamp(120px, 20vw, 180px)", border: "2px dashed rgba(139,92,246,0.3)", borderRadius: "14px", backgroundColor: "rgba(139,92,246,0.05)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", cursor: uploading ? "not-allowed" : "pointer", color: "#9ca3af", fontSize: "14px" }}>
+              <FiImage style={{ fontSize: "28px", color: "#a78bfa" }} />
+              {uploading ? "Uploading..." : "Click to add a cover image"}
+              <span style={{ fontSize: "12px", color: "#6b7280" }}>JPEG, PNG or WebP — Max 5MB</span>
+            </button>
+          )}
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
+        </div>
 
         {/* TITLE */}
         <input type="text" placeholder="Post title..." value={title} onChange={(e) => setTitle(e.target.value)}
