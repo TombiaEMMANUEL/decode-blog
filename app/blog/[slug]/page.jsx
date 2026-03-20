@@ -3,9 +3,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebaseClient";
-import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, arrayRemove, addDoc, orderBy, serverTimestamp, deleteDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, arrayRemove, addDoc, orderBy, serverTimestamp, deleteDoc, increment } from "firebase/firestore";
 import { useSession } from "next-auth/react";
-import { FiClock, FiHeart, FiBookmark, FiArrowLeft, FiTag } from "react-icons/fi";
+import { FiClock, FiHeart, FiBookmark, FiArrowLeft, FiTag, FiEye, FiShare2, FiTwitter, FiLink, FiMessageCircle } from "react-icons/fi";
 
 function timeAgo(timestamp) {
   if (!timestamp) return "";
@@ -30,6 +30,8 @@ export default function PostPage() {
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -44,6 +46,8 @@ export default function PostPage() {
             setLiked(data.likedBy?.includes(session.user.id));
             setBookmarked(data.bookmarkedBy?.includes(session.user.id));
           }
+          // Increment views
+          await updateDoc(doc(db, "posts", snap.docs[0].id), { views: increment(1) });
         }
       } catch (err) {
         console.error(err);
@@ -119,6 +123,22 @@ export default function PostPage() {
     }
   };
 
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleShareTwitter = () => {
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(window.location.href)}`;
+    window.open(url, "_blank");
+  };
+
+  const handleShareWhatsApp = () => {
+    const url = `https://wa.me/?text=${encodeURIComponent(post.title + " " + window.location.href)}`;
+    window.open(url, "_blank");
+  };
+
   const isAuthor = session?.user?.name === post?.authorName;
 
   if (loading) {
@@ -173,22 +193,40 @@ export default function PostPage() {
 
         {/* AUTHOR ROW */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px", paddingBottom: "20px", borderBottom: "1px solid rgba(255,255,255,0.08)", marginBottom: "32px", flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: "200px" }}>
             {post.authorImage && (
-              <img src={post.authorImage} alt={post.authorName} style={{ width: "30px", height: "30px", borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+              <img src={post.authorImage} alt={post.authorName} style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
             )}
-            <Link href={`/profile/${post.authorId}`}
-              style={{ color: "#e5e7eb", fontSize: "14px", fontWeight: 500, textDecoration: "none" }}
-              onMouseEnter={(e) => e.currentTarget.style.color = "#a78bfa"}
-              onMouseLeave={(e) => e.currentTarget.style.color = "#e5e7eb"}>
-              {post.authorName}
-            </Link>
-            <div style={{ display: "flex", alignItems: "center", gap: "4px", color: "#6b7280", fontSize: "13px" }}>
-              <FiClock style={{ fontSize: "11px" }} />
-              {timeAgo(post.createdAt)}
+            <div>
+              <Link href={`/profile/${post.authorId}`}
+                style={{ color: "white", fontSize: "14px", fontWeight: 600, textDecoration: "none", display: "block" }}
+                onMouseEnter={(e) => e.currentTarget.style.color = "#a78bfa"}
+                onMouseLeave={(e) => e.currentTarget.style.color = "white"}>
+                {post.authorName}
+              </Link>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                <span style={{ color: "#6b7280", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <FiClock style={{ fontSize: "11px" }} />
+                  {timeAgo(post.createdAt)}
+                </span>
+                {post.readingTime && (
+                  <span style={{ color: "#6b7280", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <FiClock style={{ fontSize: "11px" }} />
+                    {post.readingTime} min read
+                  </span>
+                )}
+                {post.views !== undefined && (
+                  <span style={{ color: "#6b7280", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <FiEye style={{ fontSize: "11px" }} />
+                    {post.views} views
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+
+          {/* ACTION BUTTONS */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <button onClick={handleLike} style={{ display: "flex", alignItems: "center", gap: "5px", background: "none", border: "1px solid", borderColor: liked ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.1)", color: liked ? "#f87171" : "#9ca3af", padding: "7px 14px", borderRadius: "100px", cursor: session ? "pointer" : "default", fontSize: "13px" }}>
               <FiHeart style={{ fill: liked ? "#f87171" : "none" }} />
               {likeCount}
@@ -197,6 +235,40 @@ export default function PostPage() {
               <FiBookmark style={{ fill: bookmarked ? "#a78bfa" : "none" }} />
               {bookmarked ? "Saved" : "Save"}
             </button>
+
+            {/* SHARE BUTTON */}
+            <div style={{ position: "relative" }}>
+              <button onClick={() => setShowShare(!showShare)}
+                style={{ display: "flex", alignItems: "center", gap: "5px", background: "none", border: "1px solid rgba(255,255,255,0.1)", color: "#9ca3af", padding: "7px 14px", borderRadius: "100px", cursor: "pointer", fontSize: "13px" }}>
+                <FiShare2 />
+                Share
+              </button>
+              {showShare && (
+                <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, backgroundColor: "rgba(15,10,30,0.98)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: "12px", padding: "8px", minWidth: "160px", boxShadow: "0 8px 32px rgba(0,0,0,0.4)", zIndex: 50 }}>
+                  <button onClick={handleShareTwitter}
+                    style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "8px", color: "#d1d5db", fontSize: "13px", background: "none", border: "none", cursor: "pointer", width: "100%" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.15)"; e.currentTarget.style.color = "white"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = "#d1d5db"; }}>
+                    <FiTwitter style={{ fontSize: "14px" }} />
+                    Share on X
+                  </button>
+                  <button onClick={handleShareWhatsApp}
+                    style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "8px", color: "#d1d5db", fontSize: "13px", background: "none", border: "none", cursor: "pointer", width: "100%" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.15)"; e.currentTarget.style.color = "white"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = "#d1d5db"; }}>
+                    <FiMessageCircle style={{ fontSize: "14px" }} />
+                    Share on WhatsApp
+                  </button>
+                  <button onClick={handleCopyLink}
+                    style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "8px", color: copied ? "#4ade80" : "#d1d5db", fontSize: "13px", background: "none", border: "none", cursor: "pointer", width: "100%" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.15)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}>
+                    <FiLink style={{ fontSize: "14px" }} />
+                    {copied ? "Copied!" : "Copy Link"}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -214,9 +286,30 @@ export default function PostPage() {
           </div>
         )}
 
+        {/* SHARE BOTTOM */}
+        <div style={{ marginTop: "40px", padding: "24px", backgroundColor: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.15)", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
+          <div>
+            <p style={{ color: "white", fontSize: "15px", fontWeight: 600, marginBottom: "4px" }}>Enjoyed this post?</p>
+            <p style={{ color: "#9ca3af", fontSize: "13px" }}>Share it with your network</p>
+          </div>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <button onClick={handleShareTwitter}
+              style={{ display: "flex", alignItems: "center", gap: "8px", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "white", padding: "10px 16px", borderRadius: "10px", cursor: "pointer", fontSize: "13px", fontWeight: 500 }}>
+              <FiTwitter />
+              Share on X
+            </button>
+            <button onClick={handleCopyLink}
+              style={{ display: "flex", alignItems: "center", gap: "8px", backgroundColor: copied ? "rgba(34,197,94,0.1)" : "rgba(255,255,255,0.05)", border: `1px solid ${copied ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.1)"}`, color: copied ? "#4ade80" : "white", padding: "10px 16px", borderRadius: "10px", cursor: "pointer", fontSize: "13px", fontWeight: 500 }}>
+              <FiLink />
+              {copied ? "Copied!" : "Copy Link"}
+            </button>
+          </div>
+        </div>
+
         {/* COMMENTS */}
         <div style={{ marginTop: "48px" }}>
-          <h3 style={{ color: "white", fontSize: "18px", fontWeight: 700, marginBottom: "20px" }}>
+          <h3 style={{ color: "white", fontSize: "18px", fontWeight: 700, marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px" }}>
+            <FiMessageCircle />
             Comments ({comments.length})
           </h3>
 
@@ -230,7 +323,9 @@ export default function PostPage() {
               </button>
             </div>
           ) : (
-            <p style={{ color: "#9ca3af", fontSize: "14px", marginBottom: "24px" }}>Sign in to leave a comment.</p>
+            <p style={{ color: "#9ca3af", fontSize: "14px", marginBottom: "24px" }}>
+              <Link href="/auth/signin" style={{ color: "#a78bfa", textDecoration: "none" }}>Sign in</Link> to leave a comment.
+            </p>
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>

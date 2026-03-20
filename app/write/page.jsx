@@ -61,7 +61,7 @@ export default function WritePage() {
       await addDoc(collection(db, "posts"), {
         title, slug, content, excerpt, category, tags: tagsArray, titleKeywords,
         authorId: session.user.id, authorName: session.user.name, authorImage: session.user.image,
-      likes: 0, likedBy: [], bookmarkedBy: [], published: true, views: 0, readingTime: readingTime,
+        likes: 0, likedBy: [], bookmarkedBy: [], published: true, views: 0, readingTime: readingTime,
         createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
       });
       router.push("/blog");
