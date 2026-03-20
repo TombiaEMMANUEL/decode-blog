@@ -17,6 +17,7 @@ function timeAgo(timestamp) {
 }
 
 export default function BlogPage() {
+  const [trending, setTrending] = useState([]);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("All");
@@ -31,6 +32,8 @@ export default function BlogPage() {
         setPosts(data);
         const cats = ["All", ...new Set(data.map((p) => p.category).filter(Boolean))];
         setCategories(cats);
+        const sorted = [...data].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 3);
+        setTrending(sorted);
       } catch (err) {
         console.error(err);
       } finally {
@@ -51,7 +54,38 @@ export default function BlogPage() {
           <p style={{ color: "#9ca3af", fontSize: "15px" }}>Thoughts, ideas, and insights from the Decode community.</p>
         </div>
 
-        {/* CATEGORY FILTER */}
+        {/* TRENDING */}
+{trending.length > 0 && (
+  <div style={{ marginBottom: "40px" }}>
+    <h2 style={{ color: "white", fontSize: "16px", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+      🔥 Trending
+    </h2>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "12px" }}>
+      {trending.map((post, index) => (
+        <Link key={post.id} href={`/blog/${post.slug}`} style={{ textDecoration: "none" }}>
+          <div style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "14px", overflow: "hidden", transition: "all 0.2s" }}
+            onMouseEnter={(e) => { e.currentTarget.style.border = "1px solid rgba(139,92,246,0.3)"; e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.05)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.border = "1px solid rgba(255,255,255,0.07)"; e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.03)"; }}>
+            {post.coverImage && (
+              <img src={post.coverImage} alt={post.title} style={{ width: "100%", height: "100px", objectFit: "cover", display: "block" }} />
+            )}
+            <div style={{ padding: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                <span style={{ color: "#f59e0b", fontSize: "12px", fontWeight: 700 }}>#{index + 1}</span>
+                <span style={{ color: "#6b7280", fontSize: "11px", display: "flex", alignItems: "center", gap: "4px" }}>
+                  👁 {post.views || 0} views
+                </span>
+              </div>
+              <h4 style={{ color: "white", fontSize: "13px", fontWeight: 600, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{post.title}</h4>
+            </div>
+          </div>
+        </Link>
+      ))}
+    </div>
+  </div>
+)}
+
+      {/* CATEGORY FILTER */}
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "32px" }}>
           {categories.map((cat) => (
             <button key={cat} onClick={() => setActiveCategory(cat)}
