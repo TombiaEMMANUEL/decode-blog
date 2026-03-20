@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import Heading from "@tiptap/extension-heading";
 import { db } from "@/lib/firebaseClient";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { FiBold, FiItalic, FiList, FiCode, FiSave, FiImage, FiX } from "react-icons/fi";
+import { RiH1, RiH2, RiH3, RiDoubleQuotesL } from "react-icons/ri";
 
 function generateKeywords(title) {
   const words = title.toLowerCase().split(" ").filter((w) => w.length > 1);
@@ -37,7 +39,8 @@ export default function WritePage() {
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit,
+      StarterKit.configure({ heading: false, codeBlock: false }),
+      Heading.configure({ levels: [1, 2, 3] }),
       Placeholder.configure({ placeholder: "Start writing your post..." }),
     ],
     editorProps: {
@@ -102,6 +105,17 @@ export default function WritePage() {
     }
   };
 
+  const toolbarButtons = [
+    { icon: RiH1, action: () => editor?.chain().focus().toggleHeading({ level: 1 }).run(), label: "H1" },
+    { icon: RiH2, action: () => editor?.chain().focus().toggleHeading({ level: 2 }).run(), label: "H2" },
+    { icon: RiH3, action: () => editor?.chain().focus().toggleHeading({ level: 3 }).run(), label: "H3" },
+    { icon: FiBold, action: () => editor?.chain().focus().toggleBold().run(), label: "Bold" },
+    { icon: FiItalic, action: () => editor?.chain().focus().toggleItalic().run(), label: "Italic" },
+    { icon: RiDoubleQuotesL, action: () => editor?.chain().focus().toggleBlockquote().run(), label: "Quote" },
+    { icon: FiList, action: () => editor?.chain().focus().toggleBulletList().run(), label: "List" },
+    { icon: FiCode, action: () => editor?.chain().focus().toggleCodeBlock().run(), label: "Code Block" },
+  ];
+
   if (!session) {
     return (
       <main style={{ minHeight: "100vh", backgroundColor: "#080412", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
@@ -112,6 +126,18 @@ export default function WritePage() {
 
   return (
     <main style={{ minHeight: "100vh", backgroundColor: "#080412", padding: "32px 20px" }}>
+      <style>{`
+        .ProseMirror h1 { color: white; font-size: 2em; font-weight: 800; margin: 24px 0 12px; letter-spacing: -0.5px; }
+        .ProseMirror h2 { color: white; font-size: 1.5em; font-weight: 700; margin: 20px 0 10px; }
+        .ProseMirror h3 { color: white; font-size: 1.2em; font-weight: 600; margin: 16px 0 8px; }
+        .ProseMirror blockquote { border-left: 3px solid #8b5cf6; padding-left: 16px; margin: 16px 0; color: #9ca3af; font-style: italic; }
+        .ProseMirror pre { background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); border-radius: 8px; padding: 16px; margin: 16px 0; overflow-x: auto; }
+        .ProseMirror code { background: rgba(139,92,246,0.15); color: #a78bfa; padding: 2px 6px; border-radius: 4px; font-size: 14px; }
+        .ProseMirror pre code { background: none; color: #e5e7eb; padding: 0; font-size: 14px; }
+        .ProseMirror ul { padding-left: 24px; margin: 12px 0; }
+        .ProseMirror li { margin: 4px 0; color: #e5e7eb; }
+        .ProseMirror p.is-editor-empty:first-child::before { color: #6b7280; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
+      `}</style>
       <div style={{ maxWidth: "800px", margin: "0 auto" }}>
 
         {/* HEADER */}
@@ -164,17 +190,12 @@ export default function WritePage() {
         </div>
 
         {/* TOOLBAR */}
-        <div style={{ display: "flex", gap: "6px", padding: "10px 12px", backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "10px 10px 0 0", borderBottom: "none", flexWrap: "wrap" }}>
-          {[
-            { icon: FiBold, action: () => editor?.chain().focus().toggleBold().run(), label: "Bold" },
-            { icon: FiItalic, action: () => editor?.chain().focus().toggleItalic().run(), label: "Italic" },
-            { icon: FiList, action: () => editor?.chain().focus().toggleBulletList().run(), label: "List" },
-            { icon: FiCode, action: () => editor?.chain().focus().toggleCode().run(), label: "Code" },
-          ].map((tool) => {
+        <div style={{ display: "flex", gap: "4px", padding: "10px 12px", backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "10px 10px 0 0", borderBottom: "none", flexWrap: "wrap" }}>
+          {toolbarButtons.map((tool) => {
             const Icon = tool.icon;
             return (
               <button key={tool.label} onClick={tool.action} title={tool.label}
-                style={{ backgroundColor: "transparent", border: "none", color: "#9ca3af", cursor: "pointer", padding: "8px", borderRadius: "6px", fontSize: "16px" }}
+                style={{ backgroundColor: "transparent", border: "none", color: "#9ca3af", cursor: "pointer", padding: "7px 10px", borderRadius: "6px", fontSize: "15px", display: "flex", alignItems: "center", justifyContent: "center" }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = "white"; e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.2)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = "#9ca3af"; e.currentTarget.style.backgroundColor = "transparent"; }}>
                 <Icon />
