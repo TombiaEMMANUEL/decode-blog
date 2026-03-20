@@ -69,19 +69,19 @@ export default function PostPage() {
       }
     };
       useEffect(() => {
-        if (post?.content) {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(post.content, "text/html");
-          const headings = Array.from(doc.querySelectorAll("h1, h2, h3"));
-          const items = headings.map((h, i) => ({
-            id: `heading-${i}`,
-            text: h.textContent,
-            level: parseInt(h.tagName[1]),
-          }));
-          setToc(items);
-        }
-      }, [post]);
-      
+      if (post?.content && typeof window !== "undefined") {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(post.content, "text/html");
+        const headings = Array.from(doc.querySelectorAll("h1, h2, h3"));
+        const items = headings.map((h, i) => ({
+          id: `heading-${i}`,
+          text: h.textContent,
+          level: parseInt(h.tagName[1]),
+        }));
+        setToc(items);
+      }
+    }, [post]);
+
     const fetchRelatedPosts = async (category, currentId) => {
         if (!category) return;
         try {
