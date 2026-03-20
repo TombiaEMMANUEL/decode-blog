@@ -30,6 +30,7 @@ export default function PostPage() {
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [relatedPosts, setRelatedPosts] = useState([]);
   const [showShare, setShowShare] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -41,6 +42,7 @@ export default function PostPage() {
         if (!snap.empty) {
           const data = { id: snap.docs[0].id, ...snap.docs[0].data() };
           setPost(data);
+          fetchRelatedPosts(data.category, snap.docs[0].id);
           setLikeCount(data.likes || 0);
           if (session?.user?.id) {
             setLiked(data.likedBy?.includes(session.user.id));
@@ -65,6 +67,20 @@ export default function PostPage() {
         console.error(err);
       }
     };
+    const fetchRelatedPosts = async (category, currentId) => {
+        if (!category) return;
+        try {
+          const q = query(collection(db, "posts"), where("category", "==", category));
+          const snap = await getDocs(q);
+          const related = snap.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .filter((p) => p.id !== currentId)
+            .slice(0, 3);
+          setRelatedPosts(related);
+        } catch (err) {
+          console.error(err);
+        }
+      };
 
     if (slug) {
       fetchPost();
@@ -352,7 +368,28 @@ export default function PostPage() {
             )}
           </div>
         </div>
-
+            {relatedPosts.length > 0 && (
+              <div style={{ marginTop: "60px", paddingTop: "40px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                <h3 style={{ color: "white", fontSize: "18px", fontWeight: 700, marginBottom: "20px" }}>Related Posts</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "16px" }}>
+                  {relatedPosts.map((related) => (
+                    <Link key={related.id} href={`/blog/${related.slug}`} style={{ textDecoration: "none" }}>
+                      <div style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "14px", overflow: "hidden", transition: "all 0.2s" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.border = "1px solid rgba(139,92,246,0.3)"; e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.05)"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.border = "1px solid rgba(255,255,255,0.07)"; e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.03)"; }}>
+                        {related.coverImage && (
+                          <img src={related.coverImage} alt={related.title} style={{ width: "100%", height: "120px", objectFit: "cover", display: "block" }} />
+                        )}
+                        <div style={{ padding: "14px" }}>
+                          <h4 style={{ color: "white", fontSize: "14px", fontWeight: 600, lineHeight: 1.4, marginBottom: "6px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{related.title}</h4>
+                          <p style={{ color: "#6b7280", fontSize: "12px" }}>{related.authorName}</p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
       </div>
     </main>
   );
