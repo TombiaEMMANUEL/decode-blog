@@ -29,6 +29,10 @@ export default function ProfilePage() {
   const { data: session } = useSession();
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
+  const [following, setFollowing] = useState([]);
+  const [followers, setFollowers] = useState([]);
+  const [showFollowModal, setShowFollowModal] = useState(false);
+  const [followModalTab, setFollowModalTab] = useState("followers");  
   const [user, setUser] = useState(null);
   const [posts, setPosts] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -50,6 +54,26 @@ export default function ProfilePage() {
           const userData = userSnap.data();
           setUser(userData);
             setFollowerCount(userData.followers?.length || 0);
+            const followersIds = userData.followers || [];
+            const followerProfiles = [];
+            for (const fid of followersIds) {
+              const fSnap = await getDoc(doc(db, "users", fid));
+              if (fSnap.exists()) followerProfiles.push({ id: fid, ...fSnap.data() });
+            }
+            setFollowers(followerProfiles);
+
+            if (session?.user?.id) {
+              const mySnap = await getDoc(doc(db, "users", session.user.id));
+              if (mySnap.exists()) {
+                const followingIds = mySnap.data().followers || [];
+                const followingProfiles = [];
+                for (const fid of followingIds) {
+                  const fSnap = await getDoc(doc(db, "users", fid));
+                  if (fSnap.exists()) followingProfiles.push({ id: fid, ...fSnap.data() });
+                }
+                setFollowing(followingProfiles);
+              }
+            }
           if (session?.user?.id && userData.followers?.includes(session.user.id)) {
             setIsFollowing(true);
           }
@@ -176,7 +200,10 @@ export default function ProfilePage() {
               <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>
                 <span style={{ color: "#a78bfa", fontSize: "13px", fontWeight: 500 }}>{posts.length} posts</span>
                 <span style={{ color: "#a78bfa", fontSize: "13px", fontWeight: 500 }}>{courses.length} courses</span>
-                <span style={{ color: "#a78bfa", fontSize: "13px", fontWeight: 500 }}>{followerCount} followers</span>
+                <button onClick={() => { setShowFollowModal(true); setFollowModalTab("followers"); }}
+                    style={{ background: "none", border: "none", color: "#a78bfa", fontSize: "13px", fontWeight: 500, cursor: "pointer", padding: 0 }}>
+                    {followerCount} followers
+                  </button>
                 {!isOwner && session && (
                   <button onClick={handleFollow}
                     style={{ display: "flex", alignItems: "center", gap: "6px", backgroundColor: isFollowing ? "transparent" : "#7c3aed", border: isFollowing ? "1px solid rgba(255,255,255,0.2)" : "none", color: isFollowing ? "#9ca3af" : "white", padding: "6px 16px", borderRadius: "100px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
@@ -305,6 +332,48 @@ export default function ProfilePage() {
         )}
 
       </div>
+
+      {showFollowModal && (
+          <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}
+            onClick={() => setShowFollowModal(false)}>
+            <div style={{ backgroundColor: "#0f0a1e", border: "1px solid rgba(139,92,246,0.3)", borderRadius: "20px", width: "100%", maxWidth: "400px", maxHeight: "80vh", overflow: "hidden", display: "flex", flexDirection: "column" }}
+              onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                {["followers", "following"].map((tab) => (
+                  <button key={tab} onClick={() => setFollowModalTab(tab)}
+                    style={{ flex: 1, padding: "16px", background: "none", border: "none", borderBottom: followModalTab === tab ? "2px solid #7c3aed" : "2px solid transparent", color: followModalTab === tab ? "white" : "#6b7280", fontSize: "14px", fontWeight: 600, cursor: "pointer", textTransform: "capitalize" }}>
+                    {tab === "followers" ? `${followerCount} Followers` : `${following.length} Following`}
+                  </button>
+                ))}
+                <button onClick={() => setShowFollowModal(false)}
+                  style={{ padding: "16px", background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: "18px" }}>
+                  ✕
+                </button>
+              </div>
+              <div style={{ overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                {(followModalTab === "followers" ? followers : following).length === 0 ? (
+                  <p style={{ color: "#6b7280", fontSize: "14px", textAlign: "center", padding: "32px 0" }}>
+                    {followModalTab === "followers" ? "No followers yet" : "Not following anyone yet"}
+                  </p>
+                ) : (
+                  (followModalTab === "followers" ? followers : following).map((user) => (
+                    <Link key={user.id} href={`/profile/${user.id}`} onClick={() => setShowFollowModal(false)} style={{ textDecoration: "none" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 12px", borderRadius: "12px", transition: "all 0.2s" }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.1)"}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                        <img src={user.image} alt={user.name} style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                        <div>
+                          <p style={{ color: "white", fontSize: "14px", fontWeight: 600 }}>{user.name}</p>
+                          <p style={{ color: "#6b7280", fontSize: "12px" }}>{user.bio || "No bio yet"}</p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+)}
     </main>
   );
 }
