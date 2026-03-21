@@ -26,6 +26,7 @@ function TableOfContents({ content }) {
     const parser = new DOMParser();
     const parsed = parser.parseFromString(content, "text/html");
     const headings = Array.from(parsed.querySelectorAll("h1, h2, h3"));
+    const [seriesPosts, setSeriesPosts] = useState([]);
     setToc(headings.map((h, i) => ({
       id: `heading-${i}`,
       text: h.textContent,
@@ -138,7 +139,15 @@ export default function PostPage() {
               .filter((p) => p.id !== snap.docs[0].id)
               .slice(0, 3);
             setRelatedPosts(related);
-          }
+            if (data.series) {
+              const seriesQ = query(collection(db, "posts"), where("series", "==", data.series));
+              const seriesSnap = await getDocs(seriesQ);
+              const series = seriesSnap.docs
+                .map((d) => ({ id: d.id, ...d.data() }))
+                .sort((a, b) => a.createdAt?.seconds - b.createdAt?.seconds);
+              setSeriesPosts(series);
+            }
+              }
         }
       } catch (err) {
         console.error(err);
@@ -365,7 +374,34 @@ export default function PostPage() {
 
         {/* CONTENT */}
         <div className="post-content" dangerouslySetInnerHTML={{ __html: post.content }} style={{ color: "#d1d5db", fontSize: "clamp(15px, 3vw, 17px)", lineHeight: 1.8 }} />
-
+               
+               {/* SERIES */}
+              {seriesPosts.length > 1 && (
+                <div style={{ margin: "40px 0", padding: "24px", backgroundColor: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: "16px" }}>
+                  <p style={{ color: "#a78bfa", fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", marginBottom: "14px" }}>
+                    📚 Series: {post.series}
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {seriesPosts.map((sp, index) => (
+                      <Link key={sp.id} href={`/blog/${sp.slug}`} style={{ textDecoration: "none" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 14px", borderRadius: "10px", backgroundColor: sp.id === post.id ? "rgba(139,92,246,0.15)" : "transparent", border: sp.id === post.id ? "1px solid rgba(139,92,246,0.3)" : "1px solid transparent", transition: "all 0.2s" }}
+                          onMouseEnter={(e) => { if (sp.id !== post.id) { e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)"; } }}
+                          onMouseLeave={(e) => { if (sp.id !== post.id) { e.currentTarget.style.backgroundColor = "transparent"; } }}>
+                          <span style={{ color: sp.id === post.id ? "#a78bfa" : "#6b7280", fontSize: "12px", fontWeight: 700, width: "20px", flexShrink: 0 }}>
+                            {index + 1}
+                          </span>
+                          <span style={{ color: sp.id === post.id ? "white" : "#9ca3af", fontSize: "14px", fontWeight: sp.id === post.id ? 600 : 400 }}>
+                            {sp.title}
+                          </span>
+                          {sp.id === post.id && (
+                            <span style={{ marginLeft: "auto", color: "#a78bfa", fontSize: "11px", fontWeight: 600 }}>Current</span>
+                          )}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
         {/* TAGS */}
         {post.tags?.length > 0 && (
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "40px", paddingTop: "20px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>

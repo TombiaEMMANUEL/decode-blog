@@ -28,6 +28,7 @@ export default function WritePage() {
   const { data: session } = useSession();
   const router = useRouter();
   const fileInputRef = useRef(null);
+  const [series, setSeries] = useState("");
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [tags, setTags] = useState("");
@@ -91,6 +92,7 @@ export default function WritePage() {
       await addDoc(collection(db, "posts"), {
         title, slug, content, excerpt, category, tags: tagsArray, titleKeywords,
         coverImage: coverImage || "",
+        series: series.trim() || "",
         authorId: session.user.id, authorName: session.user.name, authorImage: session.user.image,
         likes: 0, likedBy: [], bookmarkedBy: [], published: true,
         views: 0, readingTime: readingTime,
@@ -182,10 +184,12 @@ export default function WritePage() {
           style={{ width: "100%", backgroundColor: "transparent", border: "none", borderBottom: "1px solid rgba(255,255,255,0.1)", color: "white", fontSize: "clamp(24px, 5vw, 36px)", fontWeight: 700, padding: "12px 0", marginBottom: "20px", outline: "none", letterSpacing: "-0.5px", boxSizing: "border-box" }} />
 
         {/* META */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px", marginBottom: "24px" }}>
+       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px", marginBottom: "24px" }}>
           <input type="text" placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)}
             style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "10px 14px", color: "white", fontSize: "14px", outline: "none" }} />
           <input type="text" placeholder="Tags (comma separated)" value={tags} onChange={(e) => setTags(e.target.value)}
+            style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "10px 14px", color: "white", fontSize: "14px", outline: "none" }} />
+          <input type="text" placeholder="Series name (optional)" value={series} onChange={(e) => setSeries(e.target.value)}
             style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "10px 14px", color: "white", fontSize: "14px", outline: "none" }} />
         </div>
 
