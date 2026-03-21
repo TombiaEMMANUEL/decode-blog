@@ -54,18 +54,6 @@ export default function LearnPage() {
         const snap = await getDocs(q);
         const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         setCourses(data);
-        if (session?.user?.id) {
-            const progressData = {};
-            for (const course of data) {
-              const progressRef = doc(db, "progress", `${session.user.id}_${course.id}`);
-              const progressSnap = await getDoc(progressRef);
-              if (progressSnap.exists()) {
-                const completed = progressSnap.data().completedLessons?.length || 0;
-                progressData[course.id] = { completed, total: course.totalLessons || 0 };
-              }
-            }
-            setProgress(progressData);
-          }
         const cats = ["All", ...new Set(data.map((c) => c.category).filter(Boolean))];
         setCategories(cats);
       } catch (err) {
@@ -76,6 +64,26 @@ export default function LearnPage() {
     };
     fetchCourses();
   }, []);
+
+      useEffect(() => {
+  if (!session?.user?.id || courses.length === 0) return;
+  const fetchProgress = async () => {
+    const progressData = {};
+    for (const course of courses) {
+      try {
+        const progressSnap = await getDoc(doc(db, "progress", `${session.user.id}_${course.id}`));
+        if (progressSnap.exists()) {
+          const completed = progressSnap.data().completedLessons?.length || 0;
+          progressData[course.id] = { completed, total: course.totalLessons || 0 };
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    setProgress(progressData);
+  };
+  fetchProgress();
+}, [session, courses]);
 
   const filtered = activeCategory === "All" ? courses : courses.filter((c) => c.category === activeCategory);
 
