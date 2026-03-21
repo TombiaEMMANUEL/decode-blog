@@ -65,25 +65,25 @@ export default function LearnPage() {
     fetchCourses();
   }, []);
 
-      useEffect(() => {
-  if (!session?.user?.id || courses.length === 0) return;
-  const fetchProgress = async () => {
-    const progressData = {};
-    for (const course of courses) {
-      try {
-        const progressSnap = await getDoc(doc(db, "progress", `${session.user.id}_${course.id}`));
-        if (progressSnap.exists()) {
-          const completed = progressSnap.data().completedLessons?.length || 0;
-          progressData[course.id] = { completed, total: course.totalLessons || 0 };
+  useEffect(() => {
+    if (!session?.user?.id || courses.length === 0) return;
+    const fetchProgress = async () => {
+      const progressData = {};
+      for (const course of courses) {
+        try {
+          const progressSnap = await getDoc(doc(db, "progress", `${session.user.id}_${course.id}`));
+          if (progressSnap.exists()) {
+            const completed = progressSnap.data().completedLessons?.length || 0;
+            progressData[course.id] = { completed, total: course.totalLessons || 0 };
+          }
+        } catch (err) {
+          console.error(err);
         }
-      } catch (err) {
-        console.error(err);
       }
-    }
-    setProgress(progressData);
-  };
-  fetchProgress();
-}, [session, courses]);
+      setProgress(progressData);
+    };
+    fetchProgress();
+  }, [session, courses]);
 
   const filtered = activeCategory === "All" ? courses : courses.filter((c) => c.category === activeCategory);
 
@@ -146,32 +146,40 @@ export default function LearnPage() {
                     <h2 style={{ color: "white", fontSize: "18px", fontWeight: 700, marginBottom: "8px", lineHeight: 1.3 }}>{course.title}</h2>
                     <p style={{ color: "#9ca3af", fontSize: "14px", lineHeight: 1.6, marginBottom: "16px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{course.description}</p>
                   </Link>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                    <Link href={`/profile/${course.authorId}`} onClick={(e) => e.stopPropagation()}
-                      style={{ display: "flex", alignItems: "center", gap: "6px", color: "#6b7280", fontSize: "13px", textDecoration: "none" }}
-                      onMouseEnter={(e) => e.currentTarget.style.color = "#a78bfa"}
-                      onMouseLeave={(e) => e.currentTarget.style.color = "#6b7280"}>
-                      <FiUser style={{ fontSize: "12px" }} />
-                      {course.authorName}
-                    </Link>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#6b7280", fontSize: "13px" }}>
-                      <FiBook style={{ fontSize: "12px" }} />
-                      {course.totalLessons || 0} lessons
+
+                  {/* ── FIXED: author + lessons row, progress bar below ── */}
+                  <div style={{ paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                    {/* Author + Lessons row */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <Link href={`/profile/${course.authorId}`} onClick={(e) => e.stopPropagation()}
+                        style={{ display: "flex", alignItems: "center", gap: "6px", color: "#6b7280", fontSize: "13px", textDecoration: "none" }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = "#a78bfa"}
+                        onMouseLeave={(e) => e.currentTarget.style.color = "#6b7280"}>
+                        <FiUser style={{ fontSize: "12px" }} />
+                        {course.authorName}
+                      </Link>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#6b7280", fontSize: "13px" }}>
+                        <FiBook style={{ fontSize: "12px" }} />
+                        {course.totalLessons || 0} lessons
+                      </div>
                     </div>
+
+                    {/* Progress bar — sits cleanly below the row */}
                     {session && progress[course.id] && progress[course.id].total > 0 && (
-                        <div style={{ marginTop: "12px" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                            <span style={{ color: "#9ca3af", fontSize: "12px" }}>Progress</span>
-                            <span style={{ color: "#a78bfa", fontSize: "12px", fontWeight: 600 }}>
-                              {progress[course.id].completed}/{progress[course.id].total} lessons
-                            </span>
-                          </div>
-                          <div style={{ width: "100%", height: "6px", backgroundColor: "rgba(255,255,255,0.08)", borderRadius: "100px", overflow: "hidden" }}>
-                            <div style={{ height: "100%", width: `${(progress[course.id].completed / progress[course.id].total) * 100}%`, background: "linear-gradient(90deg, #7c3aed, #a78bfa)", borderRadius: "100px", transition: "width 0.5s ease" }} />
-                          </div>
+                      <div style={{ marginTop: "12px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                          <span style={{ color: "#9ca3af", fontSize: "12px" }}>Progress</span>
+                          <span style={{ color: "#a78bfa", fontSize: "12px", fontWeight: 600 }}>
+                            {progress[course.id].completed}/{progress[course.id].total} lessons
+                          </span>
                         </div>
-                      )}
+                        <div style={{ width: "100%", height: "6px", backgroundColor: "rgba(255,255,255,0.08)", borderRadius: "100px", overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${(progress[course.id].completed / progress[course.id].total) * 100}%`, background: "linear-gradient(90deg, #7c3aed, #a78bfa)", borderRadius: "100px", transition: "width 0.5s ease" }} />
+                        </div>
+                      </div>
+                    )}
                   </div>
+
                 </div>
               );
             })}
