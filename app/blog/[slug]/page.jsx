@@ -26,7 +26,6 @@ function TableOfContents({ content }) {
     const parser = new DOMParser();
     const parsed = parser.parseFromString(content, "text/html");
     const headings = Array.from(parsed.querySelectorAll("h1, h2, h3"));
-    const [seriesPosts, setSeriesPosts] = useState([]);
     setToc(headings.map((h, i) => ({
       id: `heading-${i}`,
       text: h.textContent,
@@ -111,6 +110,7 @@ export default function PostPage() {
   const [likeCount, setLikeCount] = useState(0);
   const [comments, setComments] = useState([]);
   const [relatedPosts, setRelatedPosts] = useState([]);
+  const [seriesPosts, setSeriesPosts] = useState([]);
   const [commentText, setCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showShare, setShowShare] = useState(false);
