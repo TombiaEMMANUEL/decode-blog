@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { db } from "@/lib/firebaseClient";
-import { collection, query, where, getDocs, doc, getDoc, updateDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { FiEdit, FiBookmark, FiFileText, FiClock, FiTag, FiCheck, FiX, FiBook } from "react-icons/fi";
@@ -27,6 +27,8 @@ const difficultyColors = {
 export default function ProfilePage() {
   const { userId } = useParams();
   const { data: session } = useSession();
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
   const [user, setUser] = useState(null);
   const [posts, setPosts] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -47,6 +49,10 @@ export default function ProfilePage() {
         if (userSnap.exists()) {
           const userData = userSnap.data();
           setUser(userData);
+            setFollowerCount(userData.followers?.length || 0);
+          if (session?.user?.id && userData.followers?.includes(session.user.id)) {
+            setIsFollowing(true);
+          }
           setBioText(userData.bio || "");
         }
         const postsQ = query(collection(db, "posts"), where("authorId", "==", userId));
@@ -74,6 +80,19 @@ export default function ProfilePage() {
   const handleSaveBio = async () => {
     setSavingBio(true);
     try {
+      const handleFollow = async () => {
+  if (!session) return;
+  const userRef = doc(db, "users", userId);
+  if (isFollowing) {
+    await updateDoc(userRef, { followers: arrayRemove(session.user.id) });
+    setIsFollowing(false);
+    setFollowerCount((c) => c - 1);
+  } else {
+    await updateDoc(userRef, { followers: arrayUnion(session.user.id) });
+    setIsFollowing(true);
+    setFollowerCount((c) => c + 1);
+  }
+};
       await updateDoc(doc(db, "users", userId), { bio: bioText });
       setUser((prev) => ({ ...prev, bio: bioText }));
       setEditingBio(false);
@@ -154,9 +173,16 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: "16px" }}>
+              <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>
                 <span style={{ color: "#a78bfa", fontSize: "13px", fontWeight: 500 }}>{posts.length} posts</span>
                 <span style={{ color: "#a78bfa", fontSize: "13px", fontWeight: 500 }}>{courses.length} courses</span>
+                <span style={{ color: "#a78bfa", fontSize: "13px", fontWeight: 500 }}>{followerCount} followers</span>
+                {!isOwner && session && (
+                  <button onClick={handleFollow}
+                    style={{ display: "flex", alignItems: "center", gap: "6px", backgroundColor: isFollowing ? "transparent" : "#7c3aed", border: isFollowing ? "1px solid rgba(255,255,255,0.2)" : "none", color: isFollowing ? "#9ca3af" : "white", padding: "6px 16px", borderRadius: "100px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+                    {isFollowing ? "Following ✓" : "Follow"}
+                  </button>
+                )}
               </div>
             </div>
           </div>
