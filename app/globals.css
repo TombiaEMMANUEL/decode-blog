@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+html[data-theme="light"] {
+  background-color: #f8f7ff !important;
+}
+
+html[data-theme="light"] body {
+  background-color: #f8f7ff !important;
+  color: #0f0a1e !important;
+}
+
+html[data-theme="light"] main {
+  background-color: #f8f7ff !important;
+}
+
 * {
   margin: 0;
   padding: 0;
