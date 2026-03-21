@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { db } from "@/lib/firebaseClient";
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { collection, getDocs, orderBy, query, doc, getDoc } from "firebase/firestore";
 import Link from "next/link";
 import { FiBook, FiCode, FiPenTool, FiTrendingUp, FiZap, FiUser, FiLayers } from "react-icons/fi";
 
@@ -43,6 +44,8 @@ export default function LearnPage() {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("All");
   const [categories, setCategories] = useState(["All"]);
+  const { data: session } = useSession();
+  const [progress, setProgress] = useState({});
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -51,6 +54,18 @@ export default function LearnPage() {
         const snap = await getDocs(q);
         const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         setCourses(data);
+        if (session?.user?.id) {
+            const progressData = {};
+            for (const course of data) {
+              const progressRef = doc(db, "progress", `${session.user.id}_${course.id}`);
+              const progressSnap = await getDoc(progressRef);
+              if (progressSnap.exists()) {
+                const completed = progressSnap.data().completedLessons?.length || 0;
+                progressData[course.id] = { completed, total: course.totalLessons || 0 };
+              }
+            }
+            setProgress(progressData);
+          }
         const cats = ["All", ...new Set(data.map((c) => c.category).filter(Boolean))];
         setCategories(cats);
       } catch (err) {
@@ -135,6 +150,19 @@ export default function LearnPage() {
                       <FiBook style={{ fontSize: "12px" }} />
                       {course.totalLessons || 0} lessons
                     </div>
+                    {session && progress[course.id] && progress[course.id].total > 0 && (
+                        <div style={{ marginTop: "12px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                            <span style={{ color: "#9ca3af", fontSize: "12px" }}>Progress</span>
+                            <span style={{ color: "#a78bfa", fontSize: "12px", fontWeight: 600 }}>
+                              {progress[course.id].completed}/{progress[course.id].total} lessons
+                            </span>
+                          </div>
+                          <div style={{ width: "100%", height: "6px", backgroundColor: "rgba(255,255,255,0.08)", borderRadius: "100px", overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${(progress[course.id].completed / progress[course.id].total) * 100}%`, background: "linear-gradient(90deg, #7c3aed, #a78bfa)", borderRadius: "100px", transition: "width 0.5s ease" }} />
+                          </div>
+                        </div>
+                      )}
                   </div>
                 </div>
               );
