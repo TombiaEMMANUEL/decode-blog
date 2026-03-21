@@ -52,6 +52,52 @@ function TableOfContents({ content }) {
     </div>
   );
 }
+   
+    function AuthorBio({ authorId, authorName, authorImage }) {
+  const [bio, setBio] = useState("");
+  const [postCount, setPostCount] = useState(0);
+
+  useEffect(() => {
+    const fetchAuthor = async () => {
+      try {
+        const { doc, getDoc, collection, query, where, getDocs } = await import("firebase/firestore");
+        const userSnap = await getDoc(doc(db, "users", authorId));
+        if (userSnap.exists()) setBio(userSnap.data().bio || "");
+        const postsSnap = await getDocs(query(collection(db, "posts"), where("authorId", "==", authorId)));
+        setPostCount(postsSnap.size);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchAuthor();
+  }, [authorId]);
+
+  return (
+    <div style={{ margin: "40px 0", padding: "28px", backgroundColor: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.15)", borderRadius: "20px" }}>
+      <p style={{ color: "#a78bfa", fontSize: "12px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px", marginBottom: "16px" }}>Written by</p>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: "16px", flexWrap: "wrap" }}>
+        <Link href={`/profile/${authorId}`}>
+          <img src={authorImage} alt={authorName} style={{ width: "60px", height: "60px", borderRadius: "50%", border: "2px solid rgba(139,92,246,0.4)", flexShrink: 0, cursor: "pointer" }} />
+        </Link>
+        <div style={{ flex: 1, minWidth: "180px" }}>
+          <Link href={`/profile/${authorId}`} style={{ textDecoration: "none" }}>
+            <h4 style={{ color: "white", fontSize: "18px", fontWeight: 700, marginBottom: "6px" }}>{authorName}</h4>
+          </Link>
+          <p style={{ color: "#9ca3af", fontSize: "14px", lineHeight: 1.6, marginBottom: "12px" }}>
+            {bio || "No bio yet."}
+          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+            <span style={{ color: "#6b7280", fontSize: "13px" }}>{postCount} posts</span>
+            <Link href={`/profile/${authorId}`}
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)", color: "#a78bfa", padding: "6px 14px", borderRadius: "100px", fontSize: "13px", fontWeight: 500, textDecoration: "none" }}>
+              View Profile →
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function PostPage() {
   const { slug } = useParams();
@@ -330,6 +376,11 @@ export default function PostPage() {
             ))}
           </div>
         )}
+
+        {/* AUTHOR BIO */}
+            {post.authorId && (
+              <AuthorBio authorId={post.authorId} authorName={post.authorName} authorImage={post.authorImage} />
+            )}
 
         {/* SHARE BOTTOM */}
         <div style={{ marginTop: "40px", padding: "24px", backgroundColor: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.15)", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
