@@ -1,3 +1,4 @@
+"use client";
 import Link from "next/link";
 import { FiBook, FiEdit, FiZap, FiUsers } from "react-icons/fi";
 
