@@ -110,9 +110,19 @@ export default function ProfilePage() {
   }, [userId, session]);
 
   const handleSaveBio = async () => {
-    setSavingBio(true);
-    try {
-      const handleFollow = async () => {
+  setSavingBio(true);
+  try {
+    await updateDoc(doc(db, "users", userId), { bio: bioText });
+    setUser((prev) => ({ ...prev, bio: bioText }));
+    setEditingBio(false);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setSavingBio(false);
+  }
+};
+
+const handleFollow = async () => {
   if (!session) return;
   const userRef = doc(db, "users", userId);
   if (isFollowing) {
@@ -125,16 +135,7 @@ export default function ProfilePage() {
     setFollowerCount((c) => c + 1);
   }
 };
-      await updateDoc(doc(db, "users", userId), { bio: bioText });
-      setUser((prev) => ({ ...prev, bio: bioText }));
-      setEditingBio(false);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSavingBio(false);
-    }
-  };
-
+      
   if (loading) {
     return (
       <main style={{ minHeight: "100vh", backgroundColor: "#080412", display: "flex", alignItems: "center", justifyContent: "center" }}>
