@@ -184,6 +184,19 @@ export default function PostPage() {
       setLiked(false);
       setLikeCount((c) => c - 1);
     } else {
+      if (session.user.id !== post.authorId) {
+          await addDoc(collection(db, "notifications"), {
+            userId: post.authorId,
+            type: "like",
+            message: `${session.user.name} liked your post "${post.title}"`,
+            postSlug: slug,
+            postTitle: post.title,
+            fromUser: session.user.name,
+            fromImage: session.user.image,
+            read: false,
+            createdAt: serverTimestamp(),
+          });
+        }
       await updateDoc(postRef, { likedBy: arrayUnion(session.user.id), likes: likeCount + 1 });
       setLiked(true);
       setLikeCount((c) => c + 1);
@@ -211,6 +224,20 @@ export default function PostPage() {
         authorImage: session.user.image, content: commentText.trim(), createdAt: serverTimestamp(),
       };
       const ref = await addDoc(collection(db, "comments"), newComment);
+      // Send notification to post author
+      if (session.user.id !== post.authorId) {
+        await addDoc(collection(db, "notifications"), {
+          userId: post.authorId,
+          type: "comment",
+          message: `${session.user.name} commented on your post "${post.title}"`,
+          postSlug: slug,
+          postTitle: post.title,
+          fromUser: session.user.name,
+          fromImage: session.user.image,
+          read: false,
+          createdAt: serverTimestamp(),
+        });
+      }
       setComments((prev) => [...prev, { id: ref.id, ...newComment, createdAt: new Date() }]);
       setCommentText("");
     } catch (err) {

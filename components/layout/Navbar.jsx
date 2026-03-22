@@ -2,6 +2,9 @@
 "use client";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
+import { FiBell } from "react-icons/fi";
+import { db } from "@/lib/firebaseClient";
+import { collection, query, where, onSnapshot, updateDoc, doc, orderBy } from "firebase/firestore";
 import { useSession, signOut } from "next-auth/react";
 import { FiUser, FiLogOut, FiEdit, FiSearch, FiMenu, FiX, FiBook, FiChevronDown } from "react-icons/fi";
 
@@ -14,6 +17,9 @@ const navItems = [
 
 const Navbar = () => {
   const [showNav, setShowNav] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const unreadCount = notifications.filter((n) => !n.read).length;
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [scrolled, setScrolled] = useState(false);
@@ -43,11 +49,31 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+  if (!session?.user?.id) return;
+  const q = query(
+    collection(db, "notifications"),
+    where("userId", "==", session.user.id),
+    orderBy("createdAt", "desc")
+  );
+  const unsubscribe = onSnapshot(q, (snap) => {
+    setNotifications(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  });
+  return () => unsubscribe();
+}, [session]);
+
   const handleSearch = (e) => {
     if (e.key === "Enter" && searchTerm.trim()) {
       window.location.href = `/search?q=${encodeURIComponent(searchTerm.trim())}`;
     }
   };
+
+  const markAllRead = async () => {
+  const unread = notifications.filter((n) => !n.read);
+  for (const n of unread) {
+    await updateDoc(doc(db, "notifications", n.id), { read: true });
+  }
+};
 
   return (
     <>
@@ -77,6 +103,58 @@ const Navbar = () => {
           {/* DESKTOP RIGHT */}
           {!isMobile && (
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {/* NOTIFICATIONS */}
+              {session && (
+                <div style={{ position: "relative" }}>
+                  <button onClick={() => { setShowNotifications(!showNotifications); markAllRead(); }}
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#9ca3af", width: "36px", height: "36px", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "16px", position: "relative" }}>
+                    <FiBell />
+                    {unreadCount > 0 && (
+                      <span style={{ position: "absolute", top: "-6px", right: "-6px", backgroundColor: "#ef4444", color: "white", borderRadius: "50%", width: "18px", height: "18px", fontSize: "10px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {showNotifications && (
+                    <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, backgroundColor: "rgba(15,10,30,0.98)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: "16px", padding: "8px", width: "320px", boxShadow: "0 8px 32px rgba(0,0,0,0.4)", zIndex: 60, maxHeight: "400px", overflowY: "auto" }}>
+                      <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", marginBottom: "8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <p style={{ color: "white", fontSize: "14px", fontWeight: 600 }}>Notifications</p>
+                        {unreadCount > 0 && (
+                          <span style={{ color: "#a78bfa", fontSize: "12px" }}>{unreadCount} unread</span>
+                        )}
+                      </div>
+                      {notifications.length === 0 ? (
+                        <div style={{ padding: "24px", textAlign: "center", color: "#6b7280", fontSize: "14px" }}>
+                          No notifications yet
+                        </div>
+                      ) : (
+                        notifications.slice(0, 10).map((n) => (
+                          <Link key={n.id} href={`/blog/${n.postSlug}`} onClick={() => setShowNotifications(false)} style={{ textDecoration: "none" }}>
+                            <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", padding: "10px 12px", borderRadius: "10px", backgroundColor: n.read ? "transparent" : "rgba(139,92,246,0.08)", marginBottom: "4px", transition: "all 0.2s" }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.12)"}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = n.read ? "transparent" : "rgba(139,92,246,0.08)"}>
+                              {n.fromImage && <img src={n.fromImage} alt={n.fromUser} style={{ width: "32px", height: "32px", borderRadius: "50%", flexShrink: 0 }} />}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ color: "white", fontSize: "13px", lineHeight: 1.4 }}>{n.message}</p>
+                                <p style={{ color: "#6b7280", fontSize: "11px", marginTop: "4px" }}>
+                                  {n.createdAt?.toDate ? new Date(n.createdAt.toDate()).toLocaleDateString() : "Just now"}
+                                </p>
+                              </div>
+                              {!n.read && (
+                                <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#7c3aed", flexShrink: 0, marginTop: "4px" }} />
+                              )}
+                            </div>
+                          </Link>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SEARCH */}
+<div style={{ display: "flex", alignItems: "center", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", padding: "8px 12px", borderRadius: "10px", width: "160px" }}></div>
               <div style={{ display: "flex", alignItems: "center", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", padding: "8px 12px", borderRadius: "10px", width: "160px" }}>
                 <FiSearch style={{ color: "#6b7280", marginRight: "8px", fontSize: "14px" }} />
                 <input type="text" placeholder="Search..." style={{ background: "transparent", border: "none", outline: "none", color: "#d1d5db", fontSize: "13px", width: "100%" }}
