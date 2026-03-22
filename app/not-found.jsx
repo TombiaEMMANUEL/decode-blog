@@ -44,18 +44,16 @@ export default function NotFound() {
           <p style={{ color: "#6b7280", fontSize: "13px", marginBottom: "16px" }}>Or explore these pages:</p>
           <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
             {[
-              { label: "Blog", href: "/blog" },
-              { label: "Learn", href: "/learn" },
-              { label: "About", href: "/about" },
-              { label: "Contact", href: "/contact" },
-            ].map((link) => (
-              <Link key={link.label} href={link.href}
-                style={{ color: "#a78bfa", fontSize: "14px", textDecoration: "none", padding: "4px 0" }}
-                onMouseEnter={(e) => e.currentTarget.style.textDecoration = "underline"}
-                onMouseLeave={(e) => e.currentTarget.style.textDecoration = "none"}>
-                {link.label}
-              </Link>
-            ))}
+                { label: "Blog", href: "/blog" },
+                { label: "Learn", href: "/learn" },
+                { label: "About", href: "/about" },
+                { label: "Contact", href: "/contact" },
+              ].map((link) => (
+                <Link key={link.label} href={link.href}
+                  style={{ color: "#a78bfa", fontSize: "14px", textDecoration: "none", padding: "4px 0" }}>
+                  {link.label}
+                </Link>
+              ))}
           </div>
         </div>
 
