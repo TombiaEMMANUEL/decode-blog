@@ -133,6 +133,18 @@ const handleFollow = async () => {
     await updateDoc(userRef, { followers: arrayUnion(session.user.id) });
     setIsFollowing(true);
     setFollowerCount((c) => c + 1);
+    // Send follow notification
+    const { addDoc, collection, serverTimestamp } = await import("firebase/firestore");
+    await addDoc(collection(db, "notifications"), {
+      userId: userId,
+      type: "follow",
+      message: `${session.user.name} started following you`,
+      postSlug: "",
+      fromUser: session.user.name,
+      fromImage: session.user.image,
+      read: false,
+      createdAt: serverTimestamp(),
+    });
   }
 };
       
