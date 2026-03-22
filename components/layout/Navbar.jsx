@@ -154,7 +154,6 @@ const Navbar = () => {
               )}
 
               {/* SEARCH */}
-<div style={{ display: "flex", alignItems: "center", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", padding: "8px 12px", borderRadius: "10px", width: "160px" }}></div>
               <div style={{ display: "flex", alignItems: "center", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", padding: "8px 12px", borderRadius: "10px", width: "160px" }}>
                 <FiSearch style={{ color: "#6b7280", marginRight: "8px", fontSize: "14px" }} />
                 <input type="text" placeholder="Search..." style={{ background: "transparent", border: "none", outline: "none", color: "#d1d5db", fontSize: "13px", width: "100%" }}
