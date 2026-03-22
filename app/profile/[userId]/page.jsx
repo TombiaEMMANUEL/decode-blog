@@ -54,13 +54,17 @@ export default function ProfilePage() {
           const userData = userSnap.data();
           setUser(userData);
             setFollowerCount(userData.followers?.length || 0);
-            const followersIds = userData.followers || [];
-            const followerProfiles = [];
-            for (const fid of followersIds) {
-              const fSnap = await getDoc(doc(db, "users", fid));
-              if (fSnap.exists()) followerProfiles.push({ id: fid, ...fSnap.data() });
-            }
-            setFollowers(followerProfiles);
+           try {
+                const followersIds = userData.followers || [];
+                const followerProfiles = [];
+                for (const fid of followersIds) {
+                  const fSnap = await getDoc(doc(db, "users", fid));
+                  if (fSnap.exists()) followerProfiles.push({ id: fid, ...fSnap.data() });
+                }
+                setFollowers(followerProfiles);
+              } catch (err) {
+                console.error("Followers error:", err);
+              }
 
             if (session?.user?.id) {
               const mySnap = await getDoc(doc(db, "users", session.user.id));
@@ -87,11 +91,15 @@ export default function ProfilePage() {
         const coursesSnap = await getDocs(coursesQ);
         setCourses(coursesSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
 
-        if (session?.user?.id === userId) {
-          const bookmarksQ = query(collection(db, "posts"), where("bookmarkedBy", "array-contains", userId));
-          const bookmarksSnap = await getDocs(bookmarksQ);
-          setBookmarks(bookmarksSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-        }
+       if (session?.user?.id === userId) {
+            try {
+              const bookmarksQ = query(collection(db, "posts"), where("bookmarkedBy", "array-contains", userId));
+              const bookmarksSnap = await getDocs(bookmarksQ);
+              setBookmarks(bookmarksSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+            } catch (err) {
+              console.error("Bookmarks error:", err);
+            }
+          }
       } catch (err) {
         console.error(err);
       } finally {

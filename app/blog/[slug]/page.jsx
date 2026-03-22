@@ -124,7 +124,7 @@ export default function PostPage() {
         if (!snap.empty) {
           const data = { id: snap.docs[0].id, ...snap.docs[0].data() };
           setPost(data);
-          setLikeCount(data.likes || 0);
+          setLikeCount(data.likedBy?.length || 0);
           if (session?.user?.id) {
             setLiked(data.likedBy?.includes(session.user.id));
             setBookmarked(data.bookmarkedBy?.includes(session.user.id));
@@ -177,31 +177,48 @@ export default function PostPage() {
   }, [slug, session]);
 
   const handleLike = async () => {
-    if (!session) return;
-    const postRef = doc(db, "posts", post.id);
-    if (liked) {
-      await updateDoc(postRef, { likedBy: arrayRemove(session.user.id), likes: likeCount - 1 });
-      setLiked(false);
-      setLikeCount((c) => c - 1);
-    } else {
-      if (session.user.id !== post.authorId) {
-          await addDoc(collection(db, "notifications"), {
-            userId: post.authorId,
-            type: "like",
-            message: `${session.user.name} liked your post "${post.title}"`,
-            postSlug: slug,
-            postTitle: post.title,
-            fromUser: session.user.name,
-            fromImage: session.user.image,
-            read: false,
-            createdAt: serverTimestamp(),
-          });
-        }
-      await updateDoc(postRef, { likedBy: arrayUnion(session.user.id), likes: likeCount + 1 });
-      setLiked(true);
-      setLikeCount((c) => c + 1);
+  if (!session) return;
+  const postRef = doc(db, "posts", post.id);
+  if (liked) {
+    await updateDoc(postRef, { 
+      likedBy: arrayRemove(session.user.id),
+      likes: likeCount - 1
+    });
+    setLiked(false);
+    setLikeCount((c) => c - 1);
+  } else {
+    await updateDoc(postRef, { 
+      likedBy: arrayUnion(session.user.id),
+      likes: likeCount + 1
+    });
+    setLiked(true);
+    setLikeCount((c) => c + 1);
+    // Send notification
+   if (session.user.id !== post.authorId) {
+      const existingQ = query(
+        collection(db, "notifications"),
+        where("userId", "==", post.authorId),
+        where("type", "==", "like"),
+        where("postSlug", "==", slug),
+        where("fromUser", "==", session.user.name)
+      );
+      const existingSnap = await getDocs(existingQ);
+      if (existingSnap.empty) {
+        await addDoc(collection(db, "notifications"), {
+          userId: post.authorId,
+          type: "like",
+          message: `${session.user.name} liked your post "${post.title}"`,
+          postSlug: slug,
+          postTitle: post.title,
+          fromUser: session.user.name,
+          fromImage: session.user.image,
+          read: false,
+          createdAt: serverTimestamp(),
+        });
+      }
     }
-  };
+  }
+};
 
   const handleBookmark = async () => {
     if (!session) return;
@@ -497,10 +514,29 @@ export default function PostPage() {
                 <div key={comment.id} style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "12px", padding: "14px 16px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
                     {comment.authorImage && <img src={comment.authorImage} alt={comment.authorName} style={{ width: "26px", height: "26px", borderRadius: "50%", flexShrink: 0 }} />}
-                    <span style={{ color: "white", fontSize: "13px", fontWeight: 600 }}>{comment.authorName}</span>
+                      <Link href={`/profile/${comment.authorId}`} style={{ color: "white", fontSize: "13px", fontWeight: 600, textDecoration: "none" }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = "#a78bfa"}
+                          onMouseLeave={(e) => e.currentTarget.style.color = "white"}>
+                          {comment.authorName}
+                        </Link>
                     <span style={{ color: "#6b7280", fontSize: "12px" }}>{timeAgo(comment.createdAt)}</span>
                   </div>
-                  <p style={{ color: "#d1d5db", fontSize: "14px", lineHeight: 1.6 }}>{comment.content}</p>
+                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px" }}>
+                        <p style={{ color: "#d1d5db", fontSize: "14px", lineHeight: 1.6, flex: 1 }}>{comment.content}</p>
+                        {session?.user?.id === comment.authorId && (
+                          <button onClick={async () => {
+                            if (confirm("Delete this comment?")) {
+                              await deleteDoc(doc(db, "comments", comment.id));
+                              setComments((prev) => prev.filter((c) => c.id !== comment.id));
+                            }
+                          }}
+                            style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: "12px", padding: "2px", flexShrink: 0, whiteSpace: "nowrap" }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = "#f87171"}
+                            onMouseLeave={(e) => e.currentTarget.style.color = "#6b7280"}>
+                            Delete
+                          </button>
+                        )}
+                      </div>
                 </div>
               ))
             )}
