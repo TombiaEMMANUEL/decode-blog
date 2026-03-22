@@ -3,6 +3,7 @@ import "./globals.css";
 import AuthSessionProvider from "@/components/providers/AuthSessionProvider";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import ScrollToTop from "@/components/ui/ScrollToTop";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -49,6 +50,7 @@ export default function RootLayout({ children }) {
         <AuthSessionProvider>
           <Navbar />
           {children}
+          <ScrollToTop />
           <Footer />
         </AuthSessionProvider>
       </body>
