@@ -52,28 +52,33 @@ export default function WritePage() {
   });
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { setError("Image must be under 5MB."); return; }
-    setUploading(true);
-    setError("");
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      const data = await res.json();
-      if (data.url) {
-        setCoverImage(data.url);
-      } else {
-        setError("Image upload failed. Please try again.");
-      }
-    } catch (err) {
-      console.error(err);
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { setError("Image must be under 10MB."); return; }
+  setUploading(true);
+  setError("");
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "decode_blog");
+    formData.append("cloud_name", process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME);
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+      { method: "POST", body: formData }
+    );
+    const data = await res.json();
+    if (data.secure_url) {
+      setCoverImage(data.secure_url);
+    } else {
       setError("Image upload failed. Please try again.");
-    } finally {
-      setUploading(false);
     }
-  };
+  } catch (err) {
+    console.error(err);
+    setError("Image upload failed. Please try again.");
+  } finally {
+    setUploading(false);
+  }
+};
 
   const handlePublish = async () => {
     if (!session) { setError("You must be signed in."); return; }
