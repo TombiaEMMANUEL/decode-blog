@@ -99,32 +99,7 @@ function TableOfContents({ content }) {
   );
 }
 
-export async function generateMetadata({ params }) {
-  try {
-    const { db } = await import("@/lib/firebaseAdmin");
-    const snap = await db.collection("posts").where("slug", "==", params.slug).get();
-    if (snap.empty) return { title: "Post Not Found" };
-    const post = snap.docs[0].data();
-    return {
-      title: post.title,
-      description: post.excerpt || post.title,
-      openGraph: {
-        title: post.title,
-        description: post.excerpt || post.title,
-        images: post.coverImage ? [{ url: post.coverImage }] : [],
-        type: "article",
-      },
-      twitter: {
-        card: "summary_large_image",
-        title: post.title,
-        description: post.excerpt || post.title,
-        images: post.coverImage ? [post.coverImage] : [],
-      },
-    };
-  } catch {
-    return { title: "Decode" };
-  }
-}
+
 
 export default function PostPage() {
   const { slug } = useParams();
