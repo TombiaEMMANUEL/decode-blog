@@ -10,8 +10,36 @@ const geist = Geist({
 });
 
 export const metadata = {
-  title: "Decode",
-  description: "Learn, Grow, Build",
+  title: {
+    default: "Decode — Learn, Grow, Build",
+    template: "%s | Decode",
+  },
+  description: "Decode is where curious minds come to read, learn, and build. Explore articles, courses, and ideas that make the complex feel simple.",
+  keywords: ["blog", "learning", "technology", "programming", "courses", "web development"],
+  authors: [{ name: "Decode" }],
+  creator: "Decode",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://decode-blog-eight.vercel.app",
+    siteName: "Decode",
+    title: "Decode — Learn, Grow, Build",
+    description: "Decode is where curious minds come to read, learn, and build.",
+    images: [
+      {
+        url: "https://decode-blog-eight.vercel.app/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Decode",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Decode — Learn, Grow, Build",
+    description: "Decode is where curious minds come to read, learn, and build.",
+    images: ["https://decode-blog-eight.vercel.app/og-image.png"],
+  },
 };
 
 export default function RootLayout({ children }) {
