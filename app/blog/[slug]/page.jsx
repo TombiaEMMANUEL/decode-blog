@@ -99,8 +99,6 @@ function TableOfContents({ content }) {
   );
 }
 
-
-
 export default function PostPage() {
   const { slug } = useParams();
   const router = useRouter();
@@ -131,7 +129,11 @@ export default function PostPage() {
             setLiked(data.likedBy?.includes(session.user.id));
             setBookmarked(data.bookmarkedBy?.includes(session.user.id));
           }
-          await updateDoc(doc(db, "posts", snap.docs[0].id), { views: increment(1) });
+          const viewedKey = `viewed_${snap.docs[0].id}`;
+            if (!localStorage.getItem(viewedKey)) {
+              await updateDoc(doc(db, "posts", snap.docs[0].id), { views: increment(1) });
+              localStorage.setItem(viewedKey, "true");
+            }
           // Fetch related posts
           if (data.category) {
             const relQ = query(collection(db, "posts"), where("category", "==", data.category));
