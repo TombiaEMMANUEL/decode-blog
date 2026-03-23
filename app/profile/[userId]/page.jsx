@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { db } from "@/lib/firebaseClient";
-import { collection, query, where, getDocs, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp } from "firebase/firestore";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { FiEdit, FiBookmark, FiFileText, FiClock, FiTag, FiCheck, FiX, FiBook } from "react-icons/fi";
@@ -32,7 +32,7 @@ export default function ProfilePage() {
   const [following, setFollowing] = useState([]);
   const [followers, setFollowers] = useState([]);
   const [showFollowModal, setShowFollowModal] = useState(false);
-  const [followModalTab, setFollowModalTab] = useState("followers");  
+  const [followModalTab, setFollowModalTab] = useState("followers");
   const [user, setUser] = useState(null);
   const [posts, setPosts] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -43,6 +43,7 @@ export default function ProfilePage() {
   const [bioText, setBioText] = useState("");
   const [savingBio, setSavingBio] = useState(false);
 
+  // Fix: isOwner uses session.user.id correctly
   const isOwner = session?.user?.id === userId;
 
   useEffect(() => {
@@ -53,53 +54,73 @@ export default function ProfilePage() {
         if (userSnap.exists()) {
           const userData = userSnap.data();
           setUser(userData);
-            setFollowerCount(userData.followers?.length || 0);
-           try {
-                const followersIds = userData.followers || [];
-                const followerProfiles = [];
-                for (const fid of followersIds) {
-                  const fSnap = await getDoc(doc(db, "users", fid));
-                  if (fSnap.exists()) followerProfiles.push({ id: fid, ...fSnap.data() });
-                }
-                setFollowers(followerProfiles);
-              } catch (err) {
-                console.error("Followers error:", err);
-              }
+          setBioText(userData.bio || "");
+          setFollowerCount(userData.followers?.length || 0);
 
-            if (session?.user?.id) {
-              const mySnap = await getDoc(doc(db, "users", session.user.id));
-              if (mySnap.exists()) {
-                const followingIds = mySnap.data().followers || [];
-                const followingProfiles = [];
-                for (const fid of followingIds) {
-                  const fSnap = await getDoc(doc(db, "users", fid));
-                  if (fSnap.exists()) followingProfiles.push({ id: fid, ...fSnap.data() });
-                }
-                setFollowing(followingProfiles);
-              }
-            }
+          // Check if current user is following
           if (session?.user?.id && userData.followers?.includes(session.user.id)) {
             setIsFollowing(true);
           }
-          setBioText(userData.bio || "");
-        }
-        const postsQ = query(collection(db, "posts"), where("authorId", "==", userId));
-        const postsSnap = await getDocs(postsQ);
-        setPosts(postsSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
 
-        const coursesQ = query(collection(db, "courses"), where("authorId", "==", userId));
-        const coursesSnap = await getDocs(coursesQ);
-        setCourses(coursesSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-
-       if (session?.user?.id === userId) {
-            try {
-              const bookmarksQ = query(collection(db, "posts"), where("bookmarkedBy", "array-contains", userId));
-              const bookmarksSnap = await getDocs(bookmarksQ);
-              setBookmarks(bookmarksSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-            } catch (err) {
-              console.error("Bookmarks error:", err);
+          // Fetch followers profiles
+          try {
+            const followersIds = userData.followers || [];
+            const followerProfiles = [];
+            for (const fid of followersIds) {
+              const fSnap = await getDoc(doc(db, "users", fid));
+              if (fSnap.exists()) followerProfiles.push({ id: fid, ...fSnap.data() });
             }
+            setFollowers(followerProfiles);
+          } catch (err) {
+            console.error("Followers error:", err);
           }
+
+          // Fetch following profiles (people this user follows)
+          try {
+            const mySnap = await getDoc(doc(db, "users", userId));
+            if (mySnap.exists()) {
+              const followingIds = mySnap.data().following || [];
+              const followingProfiles = [];
+              for (const fid of followingIds) {
+                const fSnap = await getDoc(doc(db, "users", fid));
+                if (fSnap.exists()) followingProfiles.push({ id: fid, ...fSnap.data() });
+              }
+              setFollowing(followingProfiles);
+            }
+          } catch (err) {
+            console.error("Following error:", err);
+          }
+        }
+
+        // Fetch posts
+        try {
+          const postsQ = query(collection(db, "posts"), where("authorId", "==", userId));
+          const postsSnap = await getDocs(postsQ);
+          setPosts(postsSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        } catch (err) {
+          console.error("Posts error:", err);
+        }
+
+        // Fetch courses
+        try {
+          const coursesQ = query(collection(db, "courses"), where("authorId", "==", userId));
+          const coursesSnap = await getDocs(coursesQ);
+          setCourses(coursesSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        } catch (err) {
+          console.error("Courses error:", err);
+        }
+
+        // Fetch bookmarks (owner only)
+        if (session?.user?.id === userId) {
+          try {
+            const bookmarksQ = query(collection(db, "posts"), where("bookmarkedBy", "array-contains", userId));
+            const bookmarksSnap = await getDocs(bookmarksQ);
+            setBookmarks(bookmarksSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+          } catch (err) {
+            console.error("Bookmarks error:", err);
+          }
+        }
+
       } catch (err) {
         console.error(err);
       } finally {
@@ -110,44 +131,47 @@ export default function ProfilePage() {
   }, [userId, session]);
 
   const handleSaveBio = async () => {
-  setSavingBio(true);
-  try {
-    await updateDoc(doc(db, "users", userId), { bio: bioText });
-    setUser((prev) => ({ ...prev, bio: bioText }));
-    setEditingBio(false);
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setSavingBio(false);
-  }
-};
+    setSavingBio(true);
+    try {
+      await updateDoc(doc(db, "users", userId), { bio: bioText });
+      setUser((prev) => ({ ...prev, bio: bioText }));
+      setEditingBio(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingBio(false);
+    }
+  };
 
-const handleFollow = async () => {
-  if (!session) return;
-  const userRef = doc(db, "users", userId);
-  if (isFollowing) {
-    await updateDoc(userRef, { followers: arrayRemove(session.user.id) });
-    setIsFollowing(false);
-    setFollowerCount((c) => c - 1);
-  } else {
-    await updateDoc(userRef, { followers: arrayUnion(session.user.id) });
-    setIsFollowing(true);
-    setFollowerCount((c) => c + 1);
-    // Send follow notification
-    const { addDoc, collection, serverTimestamp } = await import("firebase/firestore");
-    await addDoc(collection(db, "notifications"), {
-      userId: userId,
-      type: "follow",
-      message: `${session.user.name} started following you`,
-      postSlug: "",
-      fromUser: session.user.name,
-      fromImage: session.user.image,
-      read: false,
-      createdAt: serverTimestamp(),
-    });
-  }
-};
-      
+  const handleFollow = async () => {
+    if (!session || session.user.id === userId) return; // Prevent self-follow
+    const userRef = doc(db, "users", userId);
+    if (isFollowing) {
+      await updateDoc(userRef, { followers: arrayRemove(session.user.id) });
+      setIsFollowing(false);
+      setFollowerCount((c) => c - 1);
+    } else {
+      await updateDoc(userRef, { followers: arrayUnion(session.user.id) });
+      setIsFollowing(true);
+      setFollowerCount((c) => c + 1);
+      // Send follow notification
+      try {
+        await addDoc(collection(db, "notifications"), {
+          userId: userId,
+          type: "follow",
+          message: `${session.user.name} started following you`,
+          postSlug: "",
+          fromUser: session.user.name,
+          fromImage: session.user.image,
+          read: false,
+          createdAt: serverTimestamp(),
+        });
+      } catch (err) {
+        console.error("Notification error:", err);
+      }
+    }
+  };
+
   if (loading) {
     return (
       <main style={{ minHeight: "100vh", backgroundColor: "#080412", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -169,8 +193,6 @@ const handleFollow = async () => {
     { id: "courses", label: "Courses", icon: FiBook, count: courses.length },
     ...(isOwner ? [{ id: "bookmarks", label: "Bookmarks", icon: FiBookmark, count: bookmarks.length }] : []),
   ];
-
-  const activePosts = activeTab === "posts" ? posts : activeTab === "courses" ? courses : bookmarks;
 
   return (
     <main style={{ minHeight: "100vh", backgroundColor: "#080412", padding: "40px 20px" }}>
@@ -218,14 +240,16 @@ const handleFollow = async () => {
                 </div>
               )}
 
+              {/* STATS */}
               <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>
                 <span style={{ color: "#a78bfa", fontSize: "13px", fontWeight: 500 }}>{posts.length} posts</span>
                 <span style={{ color: "#a78bfa", fontSize: "13px", fontWeight: 500 }}>{courses.length} courses</span>
                 <button onClick={() => { setShowFollowModal(true); setFollowModalTab("followers"); }}
-                    style={{ background: "none", border: "none", color: "#a78bfa", fontSize: "13px", fontWeight: 500, cursor: "pointer", padding: 0 }}>
-                    {followerCount} followers
-                  </button>
-                {!isOwner && session && (
+                  style={{ background: "none", border: "none", color: "#a78bfa", fontSize: "13px", fontWeight: 500, cursor: "pointer", padding: 0 }}>
+                  {followerCount} followers
+                </button>
+                {/* Only show follow button if NOT owner and logged in */}
+                {!isOwner && session && session.user.id !== userId && (
                   <button onClick={handleFollow}
                     style={{ display: "flex", alignItems: "center", gap: "6px", backgroundColor: isFollowing ? "transparent" : "#7c3aed", border: isFollowing ? "1px solid rgba(255,255,255,0.2)" : "none", color: isFollowing ? "#9ca3af" : "white", padding: "6px 16px", borderRadius: "100px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
                     {isFollowing ? "Following ✓" : "Follow"}
@@ -354,47 +378,48 @@ const handleFollow = async () => {
 
       </div>
 
+      {/* FOLLOWERS/FOLLOWING MODAL */}
       {showFollowModal && (
-          <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}
-            onClick={() => setShowFollowModal(false)}>
-            <div style={{ backgroundColor: "#0f0a1e", border: "1px solid rgba(139,92,246,0.3)", borderRadius: "20px", width: "100%", maxWidth: "400px", maxHeight: "80vh", overflow: "hidden", display: "flex", flexDirection: "column" }}
-              onClick={(e) => e.stopPropagation()}>
-              <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-                {["followers", "following"].map((tab) => (
-                  <button key={tab} onClick={() => setFollowModalTab(tab)}
-                    style={{ flex: 1, padding: "16px", background: "none", border: "none", borderBottom: followModalTab === tab ? "2px solid #7c3aed" : "2px solid transparent", color: followModalTab === tab ? "white" : "#6b7280", fontSize: "14px", fontWeight: 600, cursor: "pointer", textTransform: "capitalize" }}>
-                    {tab === "followers" ? `${followerCount} Followers` : `${following.length} Following`}
-                  </button>
-                ))}
-                <button onClick={() => setShowFollowModal(false)}
-                  style={{ padding: "16px", background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: "18px" }}>
-                  ✕
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}
+          onClick={() => setShowFollowModal(false)}>
+          <div style={{ backgroundColor: "#0f0a1e", border: "1px solid rgba(139,92,246,0.3)", borderRadius: "20px", width: "100%", maxWidth: "400px", maxHeight: "80vh", overflow: "hidden", display: "flex", flexDirection: "column" }}
+            onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+              {["followers", "following"].map((tab) => (
+                <button key={tab} onClick={() => setFollowModalTab(tab)}
+                  style={{ flex: 1, padding: "16px", background: "none", border: "none", borderBottom: followModalTab === tab ? "2px solid #7c3aed" : "2px solid transparent", color: followModalTab === tab ? "white" : "#6b7280", fontSize: "14px", fontWeight: 600, cursor: "pointer", textTransform: "capitalize" }}>
+                  {tab === "followers" ? `${followerCount} Followers` : `${following.length} Following`}
                 </button>
-              </div>
-              <div style={{ overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                {(followModalTab === "followers" ? followers : following).length === 0 ? (
-                  <p style={{ color: "#6b7280", fontSize: "14px", textAlign: "center", padding: "32px 0" }}>
-                    {followModalTab === "followers" ? "No followers yet" : "Not following anyone yet"}
-                  </p>
-                ) : (
-                  (followModalTab === "followers" ? followers : following).map((user) => (
-                    <Link key={user.id} href={`/profile/${user.id}`} onClick={() => setShowFollowModal(false)} style={{ textDecoration: "none" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 12px", borderRadius: "12px", transition: "all 0.2s" }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.1)"}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                        <img src={user.image} alt={user.name} style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                        <div>
-                          <p style={{ color: "white", fontSize: "14px", fontWeight: 600 }}>{user.name}</p>
-                          <p style={{ color: "#6b7280", fontSize: "12px" }}>{user.bio || "No bio yet"}</p>
-                        </div>
+              ))}
+              <button onClick={() => setShowFollowModal(false)}
+                style={{ padding: "16px", background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: "18px" }}>
+                ✕
+              </button>
+            </div>
+            <div style={{ overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              {(followModalTab === "followers" ? followers : following).length === 0 ? (
+                <p style={{ color: "#6b7280", fontSize: "14px", textAlign: "center", padding: "32px 0" }}>
+                  {followModalTab === "followers" ? "No followers yet" : "Not following anyone yet"}
+                </p>
+              ) : (
+                (followModalTab === "followers" ? followers : following).map((u) => (
+                  <Link key={u.id} href={`/profile/${u.id}`} onClick={() => setShowFollowModal(false)} style={{ textDecoration: "none" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 12px", borderRadius: "12px", transition: "all 0.2s" }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(139,92,246,0.1)"}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                      <img src={u.image} alt={u.name} style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                      <div>
+                        <p style={{ color: "white", fontSize: "14px", fontWeight: 600 }}>{u.name}</p>
+                        <p style={{ color: "#6b7280", fontSize: "12px" }}>{u.bio || "No bio yet"}</p>
                       </div>
-                    </Link>
-                  ))
-                )}
-              </div>
+                    </div>
+                  </Link>
+                ))
+              )}
             </div>
           </div>
-)}
+        </div>
+      )}
     </main>
   );
 }
