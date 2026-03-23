@@ -43,8 +43,14 @@ export default function ProfilePage() {
   const [bioText, setBioText] = useState("");
   const [savingBio, setSavingBio] = useState(false);
 
-  // Fix: isOwner uses session.user.id correctly
   const isOwner = session?.user?.id === userId;
+
+  useEffect(() => {
+    // DEBUG: log session id vs userId
+    console.log("DEBUG - session.user.id:", session?.user?.id);
+    console.log("DEBUG - userId from URL:", userId);
+    console.log("DEBUG - isOwner:", session?.user?.id === userId);
+  }, [session, userId]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -57,12 +63,10 @@ export default function ProfilePage() {
           setBioText(userData.bio || "");
           setFollowerCount(userData.followers?.length || 0);
 
-          // Check if current user is following
           if (session?.user?.id && userData.followers?.includes(session.user.id)) {
             setIsFollowing(true);
           }
 
-          // Fetch followers profiles
           try {
             const followersIds = userData.followers || [];
             const followerProfiles = [];
@@ -75,7 +79,6 @@ export default function ProfilePage() {
             console.error("Followers error:", err);
           }
 
-          // Fetch following profiles (people this user follows)
           try {
             const mySnap = await getDoc(doc(db, "users", userId));
             if (mySnap.exists()) {
@@ -92,25 +95,26 @@ export default function ProfilePage() {
           }
         }
 
-        // Fetch posts
         try {
           const postsQ = query(collection(db, "posts"), where("authorId", "==", userId));
           const postsSnap = await getDocs(postsQ);
-          setPosts(postsSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+          const postsData = postsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          console.log("DEBUG - posts fetched:", postsData.length);
+          setPosts(postsData);
         } catch (err) {
           console.error("Posts error:", err);
         }
 
-        // Fetch courses
         try {
           const coursesQ = query(collection(db, "courses"), where("authorId", "==", userId));
           const coursesSnap = await getDocs(coursesQ);
-          setCourses(coursesSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+          const coursesData = coursesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          console.log("DEBUG - courses fetched:", coursesData.length);
+          setCourses(coursesData);
         } catch (err) {
           console.error("Courses error:", err);
         }
 
-        // Fetch bookmarks (owner only)
         if (session?.user?.id === userId) {
           try {
             const bookmarksQ = query(collection(db, "posts"), where("bookmarkedBy", "array-contains", userId));
@@ -122,7 +126,7 @@ export default function ProfilePage() {
         }
 
       } catch (err) {
-        console.error(err);
+        console.error("Main fetch error:", err);
       } finally {
         setLoading(false);
       }
@@ -144,7 +148,7 @@ export default function ProfilePage() {
   };
 
   const handleFollow = async () => {
-    if (!session || session.user.id === userId) return; // Prevent self-follow
+    if (!session || session.user.id === userId) return;
     const userRef = doc(db, "users", userId);
     if (isFollowing) {
       await updateDoc(userRef, { followers: arrayRemove(session.user.id) });
@@ -154,7 +158,6 @@ export default function ProfilePage() {
       await updateDoc(userRef, { followers: arrayUnion(session.user.id) });
       setIsFollowing(true);
       setFollowerCount((c) => c + 1);
-      // Send follow notification
       try {
         await addDoc(collection(db, "notifications"), {
           userId: userId,
@@ -240,7 +243,6 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {/* STATS */}
               <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>
                 <span style={{ color: "#a78bfa", fontSize: "13px", fontWeight: 500 }}>{posts.length} posts</span>
                 <span style={{ color: "#a78bfa", fontSize: "13px", fontWeight: 500 }}>{courses.length} courses</span>
@@ -248,7 +250,6 @@ export default function ProfilePage() {
                   style={{ background: "none", border: "none", color: "#a78bfa", fontSize: "13px", fontWeight: 500, cursor: "pointer", padding: 0 }}>
                   {followerCount} followers
                 </button>
-                {/* Only show follow button if NOT owner and logged in */}
                 {!isOwner && session && session.user.id !== userId && (
                   <button onClick={handleFollow}
                     style={{ display: "flex", alignItems: "center", gap: "6px", backgroundColor: isFollowing ? "transparent" : "#7c3aed", border: isFollowing ? "1px solid rgba(255,255,255,0.2)" : "none", color: isFollowing ? "#9ca3af" : "white", padding: "6px 16px", borderRadius: "100px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
